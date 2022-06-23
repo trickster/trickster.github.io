@@ -1,0 +1,27 @@
+@font-face {
+    font-family: 'Iowan Old Style';
+    font-style: bold-italic;
+    font-weight: 500;
+    src: url('../fonts/iowan-old-style/bold-italic.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Iowan Old Style';
+    font-style: bold;
+    font-weight: 500;
+    src: url('../fonts/iowan-old-style/bold.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Iowan Old Style';
+    font-style: italic;
+    font-weight: 500;
+    src: url('../fonts/iowan-old-style/italic.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Iowan Old Style';
+    font-style: normal;
+    font-weight: 500;
+    src: url('../fonts/iowan-old-style/regular.ttf') format('truetype')
+}
