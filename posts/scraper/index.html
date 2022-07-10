@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="dev log" />
+<meta name="keywords" content="trickster" />
+
+<title>trickster | Scraping with Scala</title>
+<meta property="og:title" content="trickster | Scraping with Scala" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://trickster.github.io/posts/scraper/" />
+<meta property="og:description" content="Using Akka Streams" />
+<meta property="og:image" content="" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Scraping with Scala" />
+<meta name="twitter:description" content="Using Akka Streams" />
+<meta property="twitter:image" content="" />
+
+
+    <link rel="alternate" type="application/rss+xml" title="trickster" href="https://trickster.github.io/ atom.xml">
+    
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"> 
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet"> -->
+
+    <link rel="stylesheet" href="https://trickster.github.io/css/base.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"
+        integrity="sha512-7x3zila4t2qNycrtZ31HO0NnJr8kg2VI67YLoRSyi9hGhRN66FHYWr7Axa9Y1J9tGYHVBPqIjSE1ogHrJTz51g=="
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <header>
+        <a class="site-name" href="/">
+            <h1>trickster</h1>
+        </a>
+        <div class="site-description">
+            <p>notes</p>
+        </div>
+        <nav>
+            <div class="links">
+                
+                
+                <a 
+                    href="https://trickster.github.io/ ">Home
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/posts/ ">Blog
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/tags/ ">Tags
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/projects/ ">Projects
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/contact/ ">Contact
+                </a>
+                
+            </div>
+        </nav>
+    </header>
+    <article>
+
+<section class="post">
+    <div class="post-header">
+        <div class="meta">
+            <div class="date">
+                <span class="day">29</span>
+                <span class="rest">February 2020</span>
+            </div>
+        </div>
+
+        <div class="matter">
+            <h1 class="title">Scraping with Scala</h1>
+        </div>
+    </div>
+    <article>
+        <p><strong>Step 1</strong>: Download ammonite</p>
+<pre data-lang="bash" style="background-color:#151515;color:#e8e8d3;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#888888;"># Download Ammonite
+</span><span style="color:#ffb964;">$</span><span> curl</span><span style="color:#ffb964;"> -L</span><span> https://github.com/lihaoyi/ammonite/releases/download/2.0.4/2.12-2.0.4-boostrap &gt; amm212 &amp;&amp; </span><span style="color:#ffb964;">chmod</span><span> +x amm212
+</span></code></pre>
+<p><strong>Step 2</strong>. Start ammonite</p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">amm212 --class-based
+</span></code></pre>
+<p><strong>Step 3</strong>. We need <code>akka-streams</code></p>
+<pre data-lang="scala" style="background-color:#151515;color:#e8e8d3;" class="language-scala "><code class="language-scala" data-lang="scala"><span>import $ivy.`com.typesafe.akka::akka-stream:2.6.3`
+</span><span style="color:#888888;">// standard imports
+</span><span>import akka.stream.</span><span style="color:#ffb964;">_
+</span><span>import akka.stream.scaladsl.</span><span style="color:#ffb964;">_
+</span><span>import akka.{ Done, NotUsed }
+</span><span>import akka.actor.ActorSystem
+</span><span>import akka.util.ByteString
+</span><span>import scala.concurrent.</span><span style="color:#ffb964;">_
+</span><span>import scala.concurrent.duration.</span><span style="color:#ffb964;">_
+</span><span>
+</span><span style="color:#888888;">// Json parsing
+</span><span>import ujson.</span><span style="color:#ffb964;">_
+</span><span>
+</span><span style="color:#888888;">// Handle files
+</span><span>import java.nio.file.Paths
+</span><span style="color:#8fbfdc;">implicit val </span><span style="color:#ffb964;">system </span><span>= ActorSystem(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">QuickStart</span><span style="color:#556633;">&quot;</span><span>)
+</span><span>
+</span><span style="color:#8fbfdc;">val </span><span style="color:#ffb964;">ids </span><span>= scala.io.Source.fromFile(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">source.txt</span><span style="color:#556633;">&quot;</span><span>) </span><span style="color:#888888;">// we need to scrape these urls or some ids for an endpoint
+</span><span>
+</span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">parser</span><span>(</span><span style="color:#ffb964;">i</span><span>: </span><span style="color:#8fbfdc;">Int</span><span>): (</span><span style="color:#8fbfdc;">Int</span><span>, </span><span style="color:#ffb964;">String</span><span>) = {
+</span><span>      </span><span style="color:#8fbfdc;">val </span><span style="color:#ffb964;">url </span><span>= </span><span style="color:#99ad6a;">s</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">ENDPOINT/{i}</span><span style="color:#556633;">&quot;
+</span><span>      </span><span style="color:#8fbfdc;">val </span><span style="color:#ffb964;">urlResponse </span><span>= Try(ujson.read(requests.get(url).data.toString))
+</span><span>      </span><span style="color:#8fbfdc;">val </span><span style="color:#ffb964;">result </span><span>= urlResponse </span><span style="color:#8fbfdc;">match </span><span>{
+</span><span>        case Success(</span><span style="color:#ffb964;">res</span><span>) </span><span style="color:#8fbfdc;">=&gt; </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">PARSED_RESULT</span><span style="color:#556633;">&quot;
+</span><span>        case Failure(</span><span style="color:#ffb964;">e</span><span>) </span><span style="color:#8fbfdc;">=&gt; </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">null</span><span style="color:#556633;">&quot;
+</span><span>      }
+</span><span>      </span><span style="color:#8fbfdc;">return </span><span>(i, result)
+</span><span>    }
+</span><span>
+</span></code></pre>
+<p><strong>Step 4</strong>. We create file sink to store the data (you can print to console as well)</p>
+<pre data-lang="scala" style="background-color:#151515;color:#e8e8d3;" class="language-scala "><code class="language-scala" data-lang="scala"><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">lineSink</span><span>(</span><span style="color:#ffb964;">filename</span><span>: </span><span style="color:#ffb964;">String</span><span>): </span><span style="color:#ffb964;">Sink</span><span>[(</span><span style="color:#8fbfdc;">Int</span><span>, </span><span style="color:#ffb964;">String</span><span>), </span><span style="color:#ffb964;">Future</span><span>[</span><span style="color:#ffb964;">IOResult</span><span>]] =
+</span><span>    Flow[(</span><span style="color:#8fbfdc;">Int</span><span>, </span><span style="color:#ffb964;">String</span><span>)].map(</span><span style="color:#ffb964;">s </span><span style="color:#8fbfdc;">=&gt; </span><span>ByteString(s._1 + </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">,</span><span style="color:#556633;">&quot;</span><span> + s._2 + </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">\n</span><span style="color:#556633;">&quot;</span><span>)).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
+</span></code></pre>
+<p><strong>Step 5</strong>. Introduce throttling behavior because some websites disallow too many requests. Here, we make 25 requests in 10 seconds (5 requests in 2 seconds)</p>
+<pre data-lang="scala" style="background-color:#151515;color:#e8e8d3;" class="language-scala "><code class="language-scala" data-lang="scala"><span style="color:#8fbfdc;">val </span><span style="color:#ffb964;">resultFile </span><span>= source.map(</span><span style="color:#ffb964;">_</span><span>.toInt).throttle(</span><span style="color:#cf6a4c;">25</span><span>, </span><span style="color:#cf6a4c;">10</span><span>.second).map(parser).runWith(lineSink(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">output.txt</span><span style="color:#556633;">&quot;</span><span>))
+</span></code></pre>
+<h3 id="all-done-from-console-with-ammonite-shell">All done from console with Ammonite shell</h3>
+
+    </article>
+</section>
+</article>
+    <footer>
+        <div class="social">
+            <ul>
+                <li>
+                    <a href="https://github.com" title="Github"><i data-feather="github"></i></a>
+                </li>
+                <li>
+                    <a href="https://twitter.com" title="Twitter"><i data-feather="twitter"></i></a>
+                </li>
+                <li>
+                    <a href="https://trickster.github.io/ atom.xml" title="trickster"><i
+                            data-feather="rss"></i></a>
+                </li>
+            </ul>
+        </div>
+        <p>
+            © trickster 2022<br>
+            Powered by <a target="_blank" href="https://getzola.org/">Zola</a>
+        </p>
+    </footer>
+    <noscript><img src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/pixel.gif"></noscript>
+    <script src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+
+</html>

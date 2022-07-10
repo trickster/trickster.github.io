@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="dev log" />
+<meta name="keywords" content="trickster" />
+
+<title>trickster | cgroupsv2 on Linux</title>
+<meta property="og:title" content="trickster | cgroupsv2 on Linux" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://trickster.github.io/posts/cgroupsv2/" />
+<meta property="og:description" content="cgroupsv2 on Fedora 35" />
+<meta property="og:image" content="" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="cgroupsv2 on Linux" />
+<meta name="twitter:description" content="cgroupsv2 on Fedora 35" />
+<meta property="twitter:image" content="" />
+
+
+    <link rel="alternate" type="application/rss+xml" title="trickster" href="https://trickster.github.io/ atom.xml">
+    
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"> 
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet"> -->
+
+    <link rel="stylesheet" href="https://trickster.github.io/css/base.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"
+        integrity="sha512-7x3zila4t2qNycrtZ31HO0NnJr8kg2VI67YLoRSyi9hGhRN66FHYWr7Axa9Y1J9tGYHVBPqIjSE1ogHrJTz51g=="
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <header>
+        <a class="site-name" href="/">
+            <h1>trickster</h1>
+        </a>
+        <div class="site-description">
+            <p>notes</p>
+        </div>
+        <nav>
+            <div class="links">
+                
+                
+                <a 
+                    href="https://trickster.github.io/ ">Home
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/posts/ ">Blog
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/tags/ ">Tags
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/projects/ ">Projects
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/contact/ ">Contact
+                </a>
+                
+            </div>
+        </nav>
+    </header>
+    <article>
+
+<section class="post">
+    <div class="post-header">
+        <div class="meta">
+            <div class="date">
+                <span class="day">23</span>
+                <span class="rest">June 2022</span>
+            </div>
+        </div>
+
+        <div class="matter">
+            <h1 class="title">cgroupsv2 on Linux</h1>
+        </div>
+    </div>
+    <article>
+        <h2 id="check-the-kernel-params">Check the kernel params</h2>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">cat</span><span> /etc/default/grub
+</span><span>&gt; GRUB_CMDLINE_LINUX=</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">.... systemd_unified_cgroup_heirarchy=1</span><span style="color:#556633;">&quot;
+</span></code></pre>
+<p>You can change the above with</p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">sudo</span><span> grubby</span><span style="color:#ffb964;"> --update-kernel</span><span>=ALL</span><span style="color:#ffb964;"> --args</span><span>=</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">systemd.unified_cgroup_hierarchy=1
+</span></code></pre>
+<h3 id="one-last-check">One last check</h3>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">grep -c</span><span> cgroup /proc/mounts </span><span style="color:#888888;"># Count cgroup mounts
+</span></code></pre>
+<p>If the above shows a value &gt; 1, then you need to reboot</p>
+<h2 id="filesystem">Filesystem</h2>
+<ul>
+<li>On boot v2 heirarchy is at <code>/sys/fs/cgroup</code>.</li>
+</ul>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">[root ~</span><span>]$ ls /sys/fs/cgroup/
+</span><span style="color:#ffb964;">cgroup.controllers</span><span>      cpuset.cpus.effective  io.pressure                    sys-kernel-config.mount
+</span><span style="color:#ffb964;">cgroup.max.depth</span><span>        cpuset.mems.effective  io.prio.class                  sys-kernel-debug.mount
+</span><span style="color:#ffb964;">cgroup.max.descendants</span><span>  cpu.stat               io.stat                        sys-kernel-tracing.mount
+</span><span style="color:#ffb964;">cgroup.procs</span><span>            dev-hugepages.mount    memory.numa_stat               system.slice
+</span><span style="color:#ffb964;">cgroup.stat</span><span>             dev-mqueue.mount       memory.pressure                user.slice
+</span><span style="color:#ffb964;">cgroup.subtree_control</span><span>  init.scope             memory.stat
+</span><span style="color:#ffb964;">cgroup.threads</span><span>          io.cost.model          misc.capacity
+</span><span style="color:#ffb964;">cpu.pressure</span><span>            io.cost.qos            sys-fs-fuse-connections.mount
+</span></code></pre>
+<h2 id="cgroups">Cgroups</h2>
+<ul>
+<li>Mechanism for heirarchically grouping processes</li>
+<li>set of controllers (kernel components) that manage, control and monitor processes in cgroups</li>
+<li>interface via psuedo filesystem</li>
+<li>manipulated manually via shell commands, programs, systemd, docker etc.</li>
+</ul>
+<h3 id="uses">Uses</h3>
+<ul>
+<li>limit %CPU, memory, set priorities for resource allocation and monitoring</li>
+</ul>
+<h2 id="what-are-cgroups">What are cgroups</h2>
+<ul>
+<li>group of processes that are bound together for resource management (one kind of namespaces in linux kernel)</li>
+<li>arranged in heirarchy</li>
+<li>can have zero or more child cgroups</li>
+<li>inherit control settings from parent</li>
+</ul>
+<h2 id="fs-interface">FS interface</h2>
+<ul>
+<li><code>mkdir</code> / <code>rmdir</code> will automatically populate/delete the directories</li>
+</ul>
+<h2 id="pid-controller-example">PID controller example</h2>
+<p>List of processes running in <code>mygrp</code> cgroup</p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">$</span><span> pwd
+</span><span style="color:#ffb964;">/sys/fs/cgroup
+</span><span style="color:#ffb964;">$</span><span> mkdir mygrp
+</span><span style="color:#ffb964;">$</span><span> cd mygrp/
+</span><span style="color:#ffb964;">$</span><span> cat cgroup.
+</span><span style="color:#ffb964;">cgroup.controllers</span><span>      cgroup.max.depth        cgroup.max.descendants  cgroup.procs            cgroup.stat             cgroup.subtree_control  cgroup.threads
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> cat cgroup.subtree_control
+</span><span style="color:#ffb964;">memory</span><span> pids
+</span><span style="color:#ffb964;">$</span><span> echo $</span><span style="color:#ffb964;">$ </span><span>&gt; mygrp/cgroup.procs </span><span style="color:#888888;"># This shell is in that cgroup
+</span><span>$ cat /proc/$</span><span style="color:#ffb964;">$</span><span>/cgroup
+</span><span style="color:#ffb964;">0::/mygrp
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> cat mygrp/cgroup.procs  </span><span style="color:#888888;">#check cgroup membership for this process
+</span><span style="color:#ffb964;">8068
+</span><span style="color:#ffb964;">8099
+</span><span>
+</span><span style="color:#ffb964;">$ </span><span style="color:#888888;"># cat has 8068 pid, because this process is starting from this shell and this shell pid is in mygrp cgroup
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> cat mygrp/pids.current
+</span><span style="color:#ffb964;">2
+</span><span style="color:#ffb964;">$</span><span> cat mygrp/pids.max
+</span><span style="color:#ffb964;">max
+</span><span style="color:#ffb964;">$</span><span> echo 5 &gt; mygrp/pids.max
+</span><span style="color:#ffb964;">$</span><span> for j in $(</span><span style="color:#ffb964;">seq</span><span> 1 5); </span><span style="color:#8fbfdc;">do </span><span style="color:#ffb964;">sleep</span><span> 60 &amp; </span><span style="color:#8fbfdc;">done
+</span><span style="color:#ffb964;">[1]</span><span> 8108
+</span><span style="color:#ffb964;">[2]</span><span> 8109
+</span><span style="color:#ffb964;">[3]</span><span> 8110
+</span><span style="color:#ffb964;">[4]</span><span> 8111
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: Resource temporarily unavailable
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> cat pids.current
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: Resource temporarily unavailable
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> cat pids.current
+</span><span style="color:#ffb964;">[1]</span><span>   Done                    sleep 60
+</span><span style="color:#ffb964;">[2]</span><span>   Done                    sleep 60
+</span><span style="color:#ffb964;">[3]-</span><span>  Done                    sleep 60
+</span><span style="color:#ffb964;">[4]+</span><span>  Done                    sleep 60
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> for j in $(</span><span style="color:#ffb964;">seq</span><span> 1 5); </span><span style="color:#8fbfdc;">do </span><span style="color:#ffb964;">sleep</span><span> 60 &amp; </span><span style="color:#8fbfdc;">done
+</span><span style="color:#ffb964;">[1]</span><span> 8158
+</span><span style="color:#ffb964;">[2]</span><span> 8159
+</span><span style="color:#ffb964;">[3]</span><span> 8160
+</span><span style="color:#ffb964;">[4]</span><span> 8161
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">bash:</span><span> fork: retry: Resource temporarily unavailable
+</span><span style="color:#ffb964;">^Cbash:</span><span> fork: Interrupted system call
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> echo $</span><span style="color:#ffb964;">$
+</span><span style="color:#ffb964;">8068
+</span><span>
+</span><span style="color:#888888;"># Cleaning up resources
+</span><span style="color:#ffb964;">$</span><span> rmdir mygrp
+</span><span style="color:#ffb964;">rmdir:</span><span> failed to remove </span><span style="color:#556633;">&#39;</span><span style="color:#99ad6a;">mygrp</span><span style="color:#556633;">&#39;</span><span>: Device or resource busy
+</span><span>
+</span><span style="color:#888888;"># put the current shell in the root cgroup
+</span><span style="color:#ffb964;">$</span><span> echo $</span><span style="color:#ffb964;">$ </span><span>&gt; /sys/fs/cgroup/cgroup.procs
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> rmdir mygrp
+</span><span>
+</span></code></pre>
+<h3 id="list-of-controllers-available">List of controllers available</h3>
+<ul>
+<li>cpu
+<ul>
+<li>bandwidth strictly limits cpu</li>
+</ul>
+</li>
+<li>cpuset
+<ul>
+<li>control CPU and memory affinity
+<ul>
+<li>pin cgroup to one cpu/subset of cpus or memory nodes</li>
+<li>dynamically manage placement of app components</li>
+<li>advanced usage</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>memory
+<ul>
+<li>soft limits &amp; hard limits</li>
+</ul>
+</li>
+<li>io
+<ul>
+<li>same as cpu</li>
+</ul>
+</li>
+<li>devices
+<ul>
+<li>important for containers</li>
+<li>limit devices</li>
+<li>example: inside container, disallow access to devices other than /dev/null/zero/full</li>
+<li><strong>control is done by attaching ebpf program to cgroup</strong></li>
+</ul>
+</li>
+<li>pids
+<ul>
+<li>limit number of pids</li>
+</ul>
+</li>
+<li>freezer
+<ul>
+<li>freeze and thaw group of processes</li>
+<li>used for container migration, checkpoint/restore</li>
+</ul>
+</li>
+<li>perf-event
+<ul>
+<li>cgroup perf monitoring</li>
+</ul>
+</li>
+<li>rdma
+<ul>
+<li>control rdma resources</li>
+</ul>
+</li>
+<li>hugetlb
+<ul>
+<li>limit usage of huge pages per cgroup</li>
+</ul>
+</li>
+</ul>
+<h3 id="enable-disable-cgroup-controllers">Enable/disable cgroup controllers</h3>
+<p>cgroup.controllers (available) &amp; cgroup.subtree_control (enabled). Some implicit controllers are always available, like freezer, perf_event</p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">$</span><span> cat cgroup.controllers
+</span><span style="color:#ffb964;">cpuset</span><span> cpu io memory hugetlb pids misc
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> cat cgroup.subtree_control
+</span><span style="color:#ffb964;">memory</span><span> pids
+</span><span style="color:#ffb964;">$</span><span> cat /sys/fs/cgroup/mygrp/pids.current
+</span><span style="color:#ffb964;">5
+</span><span style="color:#ffb964;">$</span><span> cat /sys/fs/cgroup/mygrp/pids.current
+</span><span style="color:#ffb964;">1
+</span></code></pre>
+<blockquote>
+<p>Read Linux programming interface book</p>
+</blockquote>
+<h2 id="cpu-example">CPU example</h2>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">$</span><span> mkdir grp1
+</span><span style="color:#ffb964;">$</span><span> ls grp1/cpu.*
+</span><span style="color:#ffb964;">grp1/cpu.pressure</span><span>  grp1/cpu.stat
+</span><span style="color:#ffb964;">$ </span><span style="color:#888888;"># some cpu controls are enabled in grp1 because root cgroup has no such enabled
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> echo </span><span style="color:#556633;">&#39;</span><span style="color:#99ad6a;">+pids</span><span style="color:#556633;">&#39; </span><span>&gt; cgroup.subtree_control
+</span><span style="color:#ffb964;">$</span><span> echo </span><span style="color:#556633;">&#39;</span><span style="color:#99ad6a;">+cpu</span><span style="color:#556633;">&#39; </span><span>&gt; cgroup.subtree_control
+</span><span style="color:#ffb964;">$</span><span> cat cgroup.subtree_control
+</span><span style="color:#ffb964;">cpu</span><span> memory pids
+</span><span style="color:#ffb964;">$</span><span> ls grp1/cpu.*
+</span><span style="color:#ffb964;">grp1/cpu.idle</span><span>  grp1/cpu.max.burst  grp1/cpu.stat    grp1/cpu.weight.nice
+</span><span style="color:#ffb964;">grp1/cpu.max</span><span>   grp1/cpu.pressure   grp1/cpu.weight
+</span><span>
+</span><span style="color:#ffb964;">$ </span><span style="color:#888888;"># now I got those controls in grp1 level
+</span><span>
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> ls grp1/cpu.*
+</span><span style="color:#ffb964;">grp1/cpu.pressure</span><span>  grp1/cpu.stat
+</span><span style="color:#ffb964;">$</span><span> echo </span><span style="color:#556633;">&#39;</span><span style="color:#99ad6a;">+cpu</span><span style="color:#556633;">&#39; </span><span>&gt; cgroup.subtree_control
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> ls grp1/cpu.*
+</span><span style="color:#ffb964;">grp1/cpu.idle</span><span>  grp1/cpu.max.burst  grp1/cpu.stat    grp1/cpu.weight.nice
+</span><span style="color:#ffb964;">grp1/cpu.max</span><span>   grp1/cpu.pressure   grp1/cpu.weight
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> echo </span><span style="color:#556633;">&#39;</span><span style="color:#99ad6a;">20000 100000</span><span style="color:#556633;">&#39; </span><span>&gt; grp1/cpu.max
+</span><span>
+</span><span style="color:#ffb964;">$cat</span><span> grp1/cpu.max
+</span><span style="color:#ffb964;">20000</span><span> 100000
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> echo 23148 &gt; grp1/cgroup.procs
+</span></code></pre>
+<p>CPU dropped in usage (20% as per fraction)</p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">[23148]  </span><span>%</span><span style="color:#ffb964;">CPU</span><span> = 99.57; </span><span style="color:#ffb964;">totCPU</span><span> = 77.000
+</span><span style="color:#ffb964;">[23148]  </span><span>%</span><span style="color:#ffb964;">CPU</span><span> = 99.59; </span><span style="color:#ffb964;">totCPU</span><span> = 78.000
+</span><span style="color:#ffb964;">[23148]  </span><span>%</span><span style="color:#ffb964;">CPU</span><span> = 27.48; </span><span style="color:#ffb964;">totCPU</span><span> = 79.000
+</span><span style="color:#ffb964;">[23148]  </span><span>%</span><span style="color:#ffb964;">CPU</span><span> = 20.00; </span><span style="color:#ffb964;">totCPU</span><span> = 80.000
+</span><span style="color:#ffb964;">[23148]  </span><span>%</span><span style="color:#ffb964;">CPU</span><span> = 20.00; </span><span style="color:#ffb964;">totCPU</span><span> = 81.000
+</span><span style="color:#ffb964;">[23148]  </span><span>%</span><span style="color:#ffb964;">CPU</span><span> = 20.00; </span><span style="color:#ffb964;">totCPU</span><span> = 82.000
+</span></code></pre>
+<p><code>grp1</code> controls that are enabled are <code>root/cgroup.subtree_control</code></p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">[root@siva-fedbox</span><span> cgroup] cat grp1/cgroup.controllers
+</span><span style="color:#ffb964;">cpu</span><span> memory pids
+</span><span style="color:#ffb964;">[root@siva-fedbox</span><span> cgroup] cat cgroup.subtree_control
+</span><span style="color:#ffb964;">cpu</span><span> memory pids
+</span></code></pre>
+<h2 id="advanced-usage">advanced usage</h2>
+<ul>
+<li>instead each cgroup there is <code>cgroup.events</code> containing k-v pairs</li>
+</ul>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">$</span><span> cat grp1/cgroup.events
+</span><span style="color:#ffb964;">populated</span><span> 0 </span><span style="color:#888888;"># 1 == subheirarchy contains live processes, 0 == no processes
+</span><span style="color:#ffb964;">frozen</span><span> 0 
+</span></code></pre>
+<ul>
+<li>
+<p>can monitor cgroup.events file, to get notification of changes of keys</p>
+<ul>
+<li>inotify - generate IN_MODIFY</li>
+<li>open fd, and monitor using select, epoll, poll</li>
+<li>after notification, parse cgroup.events to find populated key</li>
+</ul>
+</li>
+<li>
+<p>one process can monitor mutiple cgroup.events file (not possible in cgroupv1)</p>
+</li>
+</ul>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">$</span><span> mkdir newcgrp
+</span><span style="color:#ffb964;">$</span><span> sleep 10000 &amp;
+</span><span style="color:#ffb964;">[1]</span><span> 23614
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> echo 23614 &gt;&gt; newcgrp/cgroup.procs
+</span><span>
+</span><span style="color:#888888;"># Result
+</span><span style="color:#ffb964;">$</span><span> while inotifywait</span><span style="color:#ffb964;"> -q -e</span><span> modify newcgrp/cgroup.events ; </span><span style="color:#8fbfdc;">do </span><span style="color:#ffb964;">grep</span><span> populated newcgrp/cgroup.events ; </span><span style="color:#8fbfdc;">done
+</span><span>
+</span><span style="color:#ffb964;">newcgrp/cgroup.events</span><span> MODIFY
+</span><span style="color:#ffb964;">populated</span><span> 1 </span><span style="color:#888888;"># atleast one process
+</span><span>
+</span><span style="color:#ffb964;">$</span><span> kill</span><span style="color:#ffb964;"> -9</span><span> 23614
+</span><span>
+</span><span style="color:#ffb964;">newcgrp/cgroup.events</span><span> MODIFY
+</span><span style="color:#ffb964;">populated</span><span> 0
+</span></code></pre>
+<h2 id="ownership">Ownership</h2>
+<p>More <a href="https://man7.org/conf/ndctechtown2021/cgroups-v2-part-2-diving-deeper-NDC-TechTown-2021-Kerrisk.pdf">here</a></p>
+<ul>
+<li>delegater - priveleged user who owns parent cgroup</li>
+<li>delegatee - less privileged user who is assigned management of a subhierarchy under parent cgroup</li>
+<li>delegater grants delegatee write access to certain files</li>
+<li>change ownership of dir what will be root of delegated subtree
+<ul>
+<li>cgroups.proc</li>
+<li>cgroup.subtree_control</li>
+<li>any other filename listed in /sys/kernel/cgroup/delegate</li>
+</ul>
+</li>
+</ul>
+<h2 id="creating-a-container">Creating a container</h2>
+<ul>
+<li>
+<p>Create a cgroup using <code>mkdir</code> or <code>sudo cgcreate -g cpu,cpuset,memory,io,pids:siva</code>, this creates all resources (everything is unified). Set whatever limits you want using <code>cgset</code> or following the kernel <a href="https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html">doc</a> or <a href="https://facebookmicrosites.github.io/cgroup2/docs/memory-controller.html">this</a></p>
+</li>
+<li>
+<p>Once cgroup is created, you can use <code>unshare</code> to create namespaces</p>
+</li>
+</ul>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">sudo</span><span> cgexec</span><span style="color:#ffb964;"> -g </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">cpu,memory::/siva</span><span style="color:#556633;">&quot; </span><span>\
+</span><span>    unshare</span><span style="color:#ffb964;"> -fmuipn --mount-proc </span><span>\
+</span><span>    chroot </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">$</span><span style="color:#ffb964;">PWD</span><span style="color:#556633;">&quot; </span><span>\
+</span><span>    /bin/sh</span><span style="color:#ffb964;"> -c </span><span style="color:#556633;">&quot;
+</span><span style="color:#99ad6a;">        /bin/mount -t proc proc /proc &amp;&amp;
+</span><span style="color:#99ad6a;">        hostname mycontainer &amp;&amp;
+</span><span style="color:#99ad6a;">        /usr/bin/fish</span><span style="color:#556633;">&quot;
+</span></code></pre>
+<ul>
+<li>Delete cgroups using <code>sudo cgdelete -g cpu:/siva</code></li>
+</ul>
+<h2 id="crashing-the-container">Crashing the container</h2>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">sudo</span><span> cgset</span><span style="color:#ffb964;"> -r</span><span> memory.max=300000000 siva </span><span style="color:#888888;"># Set the maximum memory limit for cgroup siva
+</span><span style="color:#ffb964;">wget</span><span> bit.ly/fish-container</span><span style="color:#ffb964;"> -O</span><span> fish.tar </span><span style="color:#888888;"># download fish image
+</span><span style="color:#ffb964;">mkdir</span><span> myroot; cd myroot
+</span><span style="color:#ffb964;">tar -xf</span><span> ../fish.tar
+</span><span style="color:#ffb964;">sudo</span><span> cgcreate</span><span style="color:#ffb964;"> -g</span><span> cpu,cpuset,memory,io,pids:siva </span><span style="color:#888888;"># create a cgroup
+</span><span style="color:#ffb964;">sudo</span><span> cgset</span><span style="color:#ffb964;"> -r</span><span> memory.swap.max=0 siva </span><span style="color:#888888;"># set swap to 0
+</span><span style="color:#ffb964;">sudo</span><span> cgset</span><span style="color:#ffb964;"> -r</span><span> memory.max=300000000 siva </span><span style="color:#888888;"># set memory max to 300MB
+</span><span>
+</span><span style="color:#888888;"># execute the command in that cgroup, `unshare` for creating new namespaces
+</span><span style="color:#888888;"># chroot for making the current directory root, mount proc, change hostname
+</span><span>
+</span><span style="color:#ffb964;">sudo</span><span> cgexec</span><span style="color:#ffb964;"> -g </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">cpu,memory::/siva</span><span style="color:#556633;">&quot; </span><span>\
+</span><span>    unshare</span><span style="color:#ffb964;"> -fmuipn --mount-proc </span><span>\
+</span><span>    chroot </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">$</span><span style="color:#ffb964;">PWD</span><span style="color:#556633;">&quot; </span><span>\
+</span><span>    /bin/sh</span><span style="color:#ffb964;"> -c </span><span style="color:#556633;">&quot;
+</span><span style="color:#99ad6a;">        /bin/mount -t proc proc /proc &amp;&amp;
+</span><span style="color:#99ad6a;">        hostname mycontainer &amp;&amp;
+</span><span style="color:#99ad6a;">        /usr/bin/fish</span><span style="color:#556633;">&quot; 
+</span><span>
+</span></code></pre>
+<p>This creates 3 pids, you can check it in <code>/sys/fs/cgroup/siva/pids.current</code></p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">root</span><span>        2482  0.0  0.0   5580   912 pts/0    S    03:55   0:00 unshare</span><span style="color:#ffb964;"> -fmuipn --mount-proc</span><span> chroot ....
+</span><span style="color:#ffb964;">root</span><span>        2483  0.0  0.0   1520     4 pts/0    S    03:55   0:00 /bin/sh</span><span style="color:#ffb964;"> -c</span><span>  /bin/mount</span><span style="color:#ffb964;"> -t</span><span> proc proc /pro
+</span><span style="color:#ffb964;">root</span><span>        2486  0.3  0.0  10468  3672 pts/0    S+   03:55   0:00 /usr/bin/fish
+</span></code></pre>
+<p>In your new namespace/container, list of processes are</p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span>    </span><span style="color:#ffb964;">1</span><span> root       0:00 /bin/sh</span><span style="color:#ffb964;"> -c</span><span> /bin/mount</span><span style="color:#ffb964;"> -t</span><span> proc proc /proc &amp;&amp; </span><span style="color:#ffb964;">hostname</span><span> mycontainer &amp;&amp; </span><span style="color:#ffb964;">...
+</span><span>    </span><span style="color:#ffb964;">4</span><span> root       0:00 /usr/bin/fish
+</span><span>   </span><span style="color:#ffb964;">31</span><span> root       0:00 ps
+</span></code></pre>
+<p>You can check the current usage with <code>sudo cgget -r memory.current siva</code>. We crash the container by allocating &gt;300MB of memory, and checking memory usage simultaneously.</p>
+<p>In your fish shell,</p>
+<pre data-lang="text" style="background-color:#151515;color:#e8e8d3;" class="language-text "><code class="language-text" data-lang="text"><span>root@mycontainer /# set A 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+</span><span>root@mycontainer /# for a in (seq 10)
+</span><span>                        set A = &quot;$A$A&quot;
+</span><span>                    end
+</span><span>root@mycontainer /# for a in (seq 10)
+</span><span>                        set A = &quot;$A$A&quot;
+</span><span>                    end
+</span><span>Killed
+</span></code></pre>
+<h2 id="support">Support</h2>
+<ul>
+<li><code>cgroupv1</code> tools like <code>cgcreate</code> and <code>cgset</code> etc. (from libcgroup) has <a href="https://github.com/libcgroup/libcgroup/issues/12">support</a> for <code>cgroupsv2</code>. These tools have the same interface as <code>cgroupv1</code>, that's why it doesn't feel natural</li>
+</ul>
+<h2 id="resources">Resources</h2>
+<ol>
+<li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/managing_monitoring_and_updating_the_kernel/using-cgroups-v2-to-control-distribution-of-cpu-time-for-applications_managing-monitoring-and-updating-the-kernel">Redhat docs</a></li>
+<li><a href="https://man7.org/conf/ndctechtown2021/cgroups-v2-part-1-intro-NDC-TechTown-2021-Kerrisk.pdf">Cgroups v2</a></li>
+</ol>
+
+    </article>
+</section>
+</article>
+    <footer>
+        <div class="social">
+            <ul>
+                <li>
+                    <a href="https://github.com" title="Github"><i data-feather="github"></i></a>
+                </li>
+                <li>
+                    <a href="https://twitter.com" title="Twitter"><i data-feather="twitter"></i></a>
+                </li>
+                <li>
+                    <a href="https://trickster.github.io/ atom.xml" title="trickster"><i
+                            data-feather="rss"></i></a>
+                </li>
+            </ul>
+        </div>
+        <p>
+            © trickster 2022<br>
+            Powered by <a target="_blank" href="https://getzola.org/">Zola</a>
+        </p>
+    </footer>
+    <noscript><img src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/pixel.gif"></noscript>
+    <script src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+
+</html>

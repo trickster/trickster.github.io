@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="dev log" />
+<meta name="keywords" content="trickster" />
+
+<title>trickster | Error handling in Rust</title>
+<meta property="og:title" content="trickster | Error handling in Rust" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://trickster.github.io/posts/error-handling/" />
+<meta property="og:description" content="Notes on error handling in Rust" />
+<meta property="og:image" content="" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Error handling in Rust" />
+<meta name="twitter:description" content="Notes on error handling in Rust" />
+<meta property="twitter:image" content="" />
+
+
+    <link rel="alternate" type="application/rss+xml" title="trickster" href="https://trickster.github.io/ atom.xml">
+    
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"> 
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet"> -->
+
+    <link rel="stylesheet" href="https://trickster.github.io/css/base.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"
+        integrity="sha512-7x3zila4t2qNycrtZ31HO0NnJr8kg2VI67YLoRSyi9hGhRN66FHYWr7Axa9Y1J9tGYHVBPqIjSE1ogHrJTz51g=="
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <header>
+        <a class="site-name" href="/">
+            <h1>trickster</h1>
+        </a>
+        <div class="site-description">
+            <p>notes</p>
+        </div>
+        <nav>
+            <div class="links">
+                
+                
+                <a 
+                    href="https://trickster.github.io/ ">Home
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/posts/ ">Blog
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/tags/ ">Tags
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/projects/ ">Projects
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/contact/ ">Contact
+                </a>
+                
+            </div>
+        </nav>
+    </header>
+    <article>
+
+<section class="post">
+    <div class="post-header">
+        <div class="meta">
+            <div class="date">
+                <span class="day">11</span>
+                <span class="rest">June 2021</span>
+            </div>
+        </div>
+
+        <div class="matter">
+            <h1 class="title">Error handling in Rust</h1>
+        </div>
+    </div>
+    <article>
+        <h2 id="creating-new-error-types">Creating new error types</h2>
+<p>Let's wrap std library errors with our Errors</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span>use std::fmt; 
+</span><span>use std::fmt::Debug; 
+</span><span>use std::num::{ParseIntError, ParseFloatError}; 
+</span><span>
+</span><span>#[</span><span style="color:#ffb964;">derive</span><span>(Debug)] 
+</span><span style="color:#8fbfdc;">enum </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    Error1, 
+</span><span>    Error2 
+</span><span>}
+</span></code></pre>
+<p>We also need to implement fmt::Display for our Errors.</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">impl </span><span>fmt::Display for </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    </span><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">fmt</span><span>(&amp;</span><span style="color:#ffb964;">self</span><span>, </span><span style="color:#ffb964;">f</span><span>: &amp;</span><span style="color:#8fbfdc;">mut </span><span>fmt::Formatter) -&gt; fmt::Result { 
+</span><span>        </span><span style="color:#8fbfdc;">match </span><span>*</span><span style="color:#ffb964;">self </span><span>{ 
+</span><span>            MyErrors::Error1 =&gt; write!(f, </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">my first error</span><span style="color:#556633;">&quot;</span><span>),
+</span><span>            MyErrors::Error2 =&gt; write!(f, </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">my second error</span><span style="color:#556633;">&quot;</span><span>), 
+</span><span>        } 
+</span><span>    } 
+</span><span>} 
+</span></code></pre>
+<p>Let's implement our own function to test this [1]</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">test_error1</span><span>() -&gt; Result&lt;(), MyErrors&gt; { 
+</span><span>    </span><span style="color:#8fbfdc;">let </span><span>_ = </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">a</span><span style="color:#556633;">&quot;</span><span>.parse::&lt;</span><span style="color:#8fbfdc;">i32</span><span>&gt;()?; 
+</span><span>    </span><span style="color:#8fbfdc;">let </span><span>_ = </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">a</span><span style="color:#556633;">&quot;</span><span>.parse::&lt;</span><span style="color:#8fbfdc;">f64</span><span>&gt;()?; 
+</span><span>    Ok(()) 
+</span><span>}
+</span><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">test_error2</span><span>() -&gt; Result&lt;(), MyErrors&gt; { 
+</span><span>    </span><span style="color:#8fbfdc;">let </span><span>_ = </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">1</span><span style="color:#556633;">&quot;</span><span>.parse::&lt;</span><span style="color:#8fbfdc;">i32</span><span>&gt;()?; 
+</span><span>    </span><span style="color:#8fbfdc;">let </span><span>_ = </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">a</span><span style="color:#556633;">&quot;</span><span>.parse::&lt;</span><span style="color:#8fbfdc;">f64</span><span>&gt;()?; 
+</span><span>    Ok(()) 
+</span><span>}
+</span></code></pre>
+<p>The above one raises error, because Rust doesn't know how to convert ParseIntError to MyErrors. We need to implement them using From trait.</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">impl </span><span>From&lt;ParseIntError&gt; for </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    </span><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">from</span><span>(</span><span style="color:#ffb964;">err</span><span>: ParseIntError) -&gt; MyErrors { 
+</span><span>        MyErrors::Error1 
+</span><span>    } 
+</span><span>}
+</span><span style="color:#8fbfdc;">impl </span><span>From&lt;ParseFloatError&gt; for </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    </span><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">from</span><span>(</span><span style="color:#ffb964;">err</span><span>: ParseFloatError) -&gt; MyErrors { 
+</span><span>        MyErrors::Error2
+</span><span>    } 
+</span><span>}
+</span></code></pre>
+<p>You can also avoid the above step and convert it explicitly using</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">let </span><span>_ = </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">a</span><span style="color:#556633;">&quot;</span><span>.parse::&lt;</span><span style="color:#8fbfdc;">i32</span><span>&gt;().map_err(|_| MyErrors::Error1)?;
+</span></code></pre>
+<p>But, implementing From once and using it everywhere is less verbose.</p>
+<p>We can use these in our main function which returns our error type on failure.</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">main</span><span>() -&gt; Result&lt;(), MyErrors&gt; { 
+</span><span>    </span><span style="color:#888888;">//test_error1()?;     
+</span><span>    </span><span style="color:#8fbfdc;">if let </span><span>Err(e) = test_error1() { 
+</span><span>        println!(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Error message: </span><span style="color:#7697d6;">{}</span><span style="color:#556633;">&quot;</span><span>, e) 
+</span><span>    }
+</span><span>    </span><span style="color:#8fbfdc;">if let </span><span>Err(e) = test_error2() { 
+</span><span>        println!(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Error message: </span><span style="color:#7697d6;">{}</span><span style="color:#556633;">&quot;</span><span>, e) 
+</span><span>    } 
+</span><span>    Ok(()) 
+</span><span>}
+</span></code></pre>
+<p>If we want to use <code>std::error::Error</code> in main, we need to implement it for <code>MyErrors</code> using</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">impl </span><span>std::error::Error for </span><span style="color:#ffb964;">MyErrors</span><span>{} 
+</span></code></pre>
+<p>Then we can use</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">main</span><span>() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {
+</span><span>   ...
+</span><span>}
+</span></code></pre>
+<p>Full working example using everything above. Remember if you don't want infallible main, you can just print the error message in main if any, otherwise use <code>?</code> operator.</p>
+<h2 id="wrapping-underlying-errors">Wrapping underlying errors</h2>
+<p>We can create our error type that can directly wrap underlying error and print backtrace.</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#ffb964;">derive</span><span>(Debug)] 
+</span><span style="color:#8fbfdc;">enum </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    Error1(ParseIntError), 
+</span><span>    Error2(ParseFloatError) 
+</span><span>}
+</span><span style="color:#888888;">// Implement Display
+</span><span style="color:#8fbfdc;">impl </span><span>fmt::Display for </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    </span><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">fmt</span><span>(&amp;</span><span style="color:#ffb964;">self</span><span>, </span><span style="color:#ffb964;">f</span><span>: &amp;</span><span style="color:#8fbfdc;">mut </span><span>fmt::Formatter) -&gt; fmt::Result { 
+</span><span>        </span><span style="color:#8fbfdc;">match </span><span>*</span><span style="color:#ffb964;">self </span><span>{ 
+</span><span>             MyErrors::Error1(..) =&gt; write!(f, </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">my first error</span><span style="color:#556633;">&quot;</span><span>), </span><span style="color:#888888;">// wrap ParseIntError 
+</span><span>             MyErrors::Error2(..) =&gt; write!(f, </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">my second error</span><span style="color:#556633;">&quot;</span><span>), </span><span style="color:#888888;">// wrap ParseFloatError 
+</span><span>        } 
+</span><span>    } 
+</span><span>}
+</span></code></pre>
+<p>We need to implement From for converting error types from one to another</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#888888;">// convert ParseIntError to MyErrors::Error1 
+</span><span style="color:#8fbfdc;">impl </span><span>From&lt;ParseIntError&gt; for </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    </span><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">from</span><span>(</span><span style="color:#ffb964;">err</span><span>: ParseIntError) -&gt; MyErrors { 
+</span><span>        MyErrors::Error1(err) 
+</span><span>    } 
+</span><span>} 
+</span><span>
+</span><span style="color:#888888;">// convert ParseFloatError to MyErrors::Error1 
+</span><span style="color:#8fbfdc;">impl </span><span>From&lt;ParseFloatError&gt; for </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    </span><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">from</span><span>(</span><span style="color:#ffb964;">err</span><span>: ParseFloatError) -&gt; MyErrors { 
+</span><span>        MyErrors::Error2(err) 
+</span><span>    } 
+</span><span>}
+</span></code></pre>
+<p>We can use the same test functions as above [1] and we need backtrace. For backtrace, instead of empty impl <code>std::error::Error</code> for our error type, we can implement source</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">impl </span><span>std::error::Error for </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    </span><span style="color:#888888;">// if you want source of the error ---- 
+</span><span>    </span><span style="color:#888888;">// In our case display error message related to 
+</span><span>    </span><span style="color:#888888;">// ParseIntError or ParseFloatError 
+</span><span>    </span><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">source</span><span>(&amp;</span><span style="color:#ffb964;">self</span><span>) -&gt; Option&lt;&amp;(dyn std::error::Error + </span><span style="color:#8fbfdc;">&#39;static</span><span>)&gt; { 
+</span><span>        </span><span style="color:#8fbfdc;">match </span><span>*</span><span style="color:#ffb964;">self </span><span>{ 
+</span><span>            MyErrors::Error1(</span><span style="color:#8fbfdc;">ref</span><span> e) =&gt; Some(e), 
+</span><span>            MyErrors::Error2(</span><span style="color:#8fbfdc;">ref</span><span> e) =&gt; Some(e), 
+</span><span>        } 
+</span><span>    } 
+</span><span>}
+</span></code></pre>
+<p>and we have our main function like this</p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="color:#8fbfdc;">fn </span><span style="color:#fad07a;">main</span><span>() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; { 
+</span><span>    </span><span style="color:#888888;">// test_error1()?; 
+</span><span>    </span><span style="color:#8fbfdc;">if let </span><span>Err(e) = test_error1() { 
+</span><span>         println!(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Error message: </span><span style="color:#7697d6;">{}</span><span style="color:#556633;">&quot;</span><span>, e); 
+</span><span>         </span><span style="color:#8fbfdc;">if let </span><span>Some(source) = e.source() { 
+</span><span>            println!(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;"> Caused by: </span><span style="color:#7697d6;">{}</span><span style="color:#556633;">&quot;</span><span>, source); 
+</span><span>         } 
+</span><span>     } 
+</span><span>     Ok(())
+</span><span>}
+</span></code></pre>
+<p>We get this output</p>
+<pre data-lang="sh" style="background-color:#151515;color:#e8e8d3;" class="language-sh "><code class="language-sh" data-lang="sh"><span style="color:#ffb964;">Error</span><span> message: my first error
+</span><span>   </span><span style="color:#ffb964;">Caused</span><span> by: invalid digit found in string
+</span></code></pre>
+<p><a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=a7d10bf89ae970fca143d494d11c0e95">Playground</a> for above -- with boilerplate</p>
+<p>To create our own error type, we implemented, From conversions, std::error::Error and it's methods. In order to avoid all these, we can use a trait called <code>thiserror</code></p>
+<pre data-lang="rust" style="background-color:#151515;color:#e8e8d3;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[</span><span style="color:#ffb964;">derive</span><span>(thiserror::Error, Debug)] 
+</span><span style="color:#8fbfdc;">enum </span><span style="color:#ffb964;">MyErrors </span><span>{ 
+</span><span>    #[</span><span style="color:#ffb964;">error</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">my first error</span><span style="color:#556633;">&quot;</span><span>)] 
+</span><span>    Error1(#[</span><span style="color:#ffb964;">from</span><span>] ParseIntError), 
+</span><span>    #[</span><span style="color:#ffb964;">error</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">my second error</span><span style="color:#556633;">&quot;</span><span>)] 
+</span><span>    Error2(#[</span><span style="color:#ffb964;">from</span><span>] ParseFloatError) 
+</span><span>}
+</span></code></pre>
+<p>The above implements custom error type with our message, from conversions and backtrace.</p>
+<p><a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2018&amp;gist=e50690f48555da81474b98ad4b0d98dd">Playground</a> for above -- using <code>thiserror</code></p>
+<p>Both of these, produce the same output. Using thiserror reduced the code size by half in our example</p>
+
+    </article>
+</section>
+</article>
+    <footer>
+        <div class="social">
+            <ul>
+                <li>
+                    <a href="https://github.com" title="Github"><i data-feather="github"></i></a>
+                </li>
+                <li>
+                    <a href="https://twitter.com" title="Twitter"><i data-feather="twitter"></i></a>
+                </li>
+                <li>
+                    <a href="https://trickster.github.io/ atom.xml" title="trickster"><i
+                            data-feather="rss"></i></a>
+                </li>
+            </ul>
+        </div>
+        <p>
+            © trickster 2022<br>
+            Powered by <a target="_blank" href="https://getzola.org/">Zola</a>
+        </p>
+    </footer>
+    <noscript><img src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/pixel.gif"></noscript>
+    <script src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+
+</html>

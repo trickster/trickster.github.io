@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://trickster.github.io/sitemap.xml

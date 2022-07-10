@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="dev log" />
+<meta name="keywords" content="trickster" />
+
+<title>trickster | Gaussian processes and Bayesian optimization</title>
+<meta property="og:title" content="trickster | Gaussian processes and Bayesian optimization" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://trickster.github.io/posts/gp/" />
+<meta property="og:description" content="Optimization, sampling and gaussian processes, notes from the book &#x27;Algorithms for optimization&#x27;" />
+<meta property="og:image" content="" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Gaussian processes and Bayesian optimization" />
+<meta name="twitter:description" content="Optimization, sampling and gaussian processes, notes from the book &#x27;Algorithms for optimization&#x27;" />
+<meta property="twitter:image" content="" />
+
+
+    <link rel="alternate" type="application/rss+xml" title="trickster" href="https://trickster.github.io/ atom.xml">
+    
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"> 
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet"> -->
+
+    <link rel="stylesheet" href="https://trickster.github.io/css/base.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"
+        integrity="sha512-7x3zila4t2qNycrtZ31HO0NnJr8kg2VI67YLoRSyi9hGhRN66FHYWr7Axa9Y1J9tGYHVBPqIjSE1ogHrJTz51g=="
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <header>
+        <a class="site-name" href="/">
+            <h1>trickster</h1>
+        </a>
+        <div class="site-description">
+            <p>notes</p>
+        </div>
+        <nav>
+            <div class="links">
+                
+                
+                <a 
+                    href="https://trickster.github.io/ ">Home
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/posts/ ">Blog
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/tags/ ">Tags
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/projects/ ">Projects
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/contact/ ">Contact
+                </a>
+                
+            </div>
+        </nav>
+    </header>
+    <article>
+
+<section class="post">
+    <div class="post-header">
+        <div class="meta">
+            <div class="date">
+                <span class="day">15</span>
+                <span class="rest">April 2020</span>
+            </div>
+        </div>
+
+        <div class="matter">
+            <h1 class="title">Gaussian processes and Bayesian optimization</h1>
+        </div>
+    </div>
+    <article>
+        <p>This should be pasted in <a href="https://upmath.me">upmath</a> to get all the latex equations in SVG format for posting on svbtle blog. I use mathpix notes because it syncs all my snips and I can insert raw images served from Mathpix CDN (made from Mathpix notes).</p>
+<p>Sources:</p>
+<ul>
+<li><a href="https://mitpress.mit.edu/books/algorithms-optimization">Algorithms for optimization</a> book</li>
+<li><a href="https://pyro.ai/examples/bo.html">Pyro</a>'s documentation</li>
+</ul>
+<h2 id="motivation-behind-these-optimization-techniques">Motivation behind these optimization techniques</h2>
+<p>For many optimization problems, function evaluations can be quite expensive. For example, deep learning parameters may require a week of GPU training. A common approach to build a <em>surrogate model</em>, which is a model of the optimization problem that can be efficiently optimized in lieu of the true objective function. Further evaluations of the true objective function can be used to improve the model. Fitting such models requires an initial set of points</p>
+<h2 id="sampling-plans">Sampling plans</h2>
+<p>These are sampling plans for covering the search space when we have limited resources.</p>
+<h3 id="full-factorial">Full factorial</h3>
+<p>The <em>full factorial</em> sampling plan places a grid of evenly spaced points over the search space. This approach is easy to implement, does not rely on randomness, and covers the space, but it uses a large number of points. Sampling grid is bounded as shown in the picture</p>
+<p><img src="https://cdn.mathpix.com/snip/images/0vpLGVPhZB1DnjFeZUd7XPn03bpK17u0ZbIMdYpBuPM.original.fullsize.png" alt="image" /></p>
+<p><strong>Exponentially increase design points when the dimensionality high.</strong></p>
+<h3 id="random-sampling">Random sampling</h3>
+<p>Draw m random samples over the design space.</p>
+<p>A uniform projection plan is a sampling plan over a discrete grid where the dis- tribution over each dimension is uniform.</p>
+<p><img src="https://cdn.mathpix.com/snip/images/o_0tCEn2Rb6fSu52cE72G_lRFSC69D1wjyN1d1vE_M0.original.fullsize.png" alt="image" /></p>
+<h3 id="stratified-sampling">Stratified sampling</h3>
+<p>An $m \times m$ grid could miss important information due to systematic regularities. Cells are sampled at a point chosen uni- formly at random from within the cell rather than at the cell’s center</p>
+<p><img src="https://cdn.mathpix.com/snip/images/hchZo2Qlz8EyP5bTXzv3vrly-u_VYjYSio_LuyLoPw0.original.fullsize.png" alt="image" /></p>
+<p>There are several other sampling plans. We skip for now.</p>
+<h2 id="surrogate-models">Surrogate models</h2>
+<p>Now we discuss how to use these samples to construct models of the objective function that can be used in place of the real objective function. These <em>surrogate</em> models are inexpensive to calculate</p>
+<h3 id="fitting-models">Fitting models</h3>
+<p>Suppose we have $m$ design points $X=\left\{\mathbf{x}^{(1)},\mathbf{x}^{(2)},\ldots,\mathbf{x}^{(m)}\right\}$ and function evaluations $\mathbf{y}=\left\{y^{(1)}, y^{(2)}, \ldots, y^{(m)}\right\}$, the model will predict</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\hat{\mathbf{y}}=\left\{\hat{f}_{\mathbf{\theta}}\left(\mathbf{x}^{(1)}\right), \hat{f}_{\mathbf{\theta}}\left(\mathbf{x}^{(2)}\right), \ldots, \hat{f}_{\mathbf{\theta}}\left(\mathbf{x}^{(m)}\right)\right\}
+</span></code></pre>
+<p>A surrogate model $\hat{f}$ parameterized by $\theta$ is designed to mimic the true objective function $f$. The parameters $\theta$ can be adjusted to fit the model based on samples collected from $f$</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\underset{\theta}{\operatorname{minimize}} \quad\|\mathbf{y}-\hat{\mathbf{y}}\|_{p}
+</span></code></pre>
+<p>This penalizes the deviation of the model only at the data points. There is no guarantee that the model will continue to fit well away from observed data, and model accuracy typically decreases the farther we go from the sampled points. This form of model fitting is called <strong>regression</strong>.</p>
+<h3 id="linear-models">Linear models</h3>
+<p>A simple surrogate model is the linear model, which has the form</p>
+<p>$$\hat{f}=w_{0}+\mathbf{w}^{\top} \mathbf{x} \quad \boldsymbol{\theta}=\left\{w_{0}, \mathbf{w}\right\}$$</p>
+<p>For an n-dimensional design space, the linear model has n + 1 parameters, and thus requires at least n + 1 samples to fit unambiguously.</p>
+<p>$$\hat{f}=\boldsymbol{\theta}^{\top} \mathbf{x}$$</p>
+<p>Finding an optimal θ requires solving a linear regression problem:</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\operatorname{minimize}_{\Theta}\|\mathbf{y}-\mathbf{X} \boldsymbol{\theta}\|_{2}^{2}
+</span></code></pre>
+<p>where $X$ is a design matrix formed from $m$ data points</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\mathbf{X}=\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>\left(\mathbf{x}^{(1)}\right)^{\top} \\
+</span><span>\left(\mathbf{x}^{(2)}\right)^{\top} \\
+</span><span>\vdots \\
+</span><span>\left(\mathbf{x}^{(m)}\right)^{\top}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]
+</span></code></pre>
+<p>Linear regression has an analytic solution</p>
+<p>$$\theta=X^{+} y$$</p>
+<p>where $X^+$ is the Moore-Penrose pseudoinverse of $X$. In Julia, this is <code>pinv</code></p>
+<p>$$\mathbf{X}^{+}=\mathbf{X}^{\top}\left(\mathbf{X} \mathbf{X}^{\top}\right)^{-1}$$</p>
+<h3 id="basis-functions">Basis functions</h3>
+<p>The linear model is a linear combination of the components of $x$:</p>
+<p>$$\hat{f}(\mathbf{x})=\theta_{1} x_{1}+\cdots+\theta_{n} x_{n}=\sum_{i=1}^{n} \theta_{i} x_{i}=\theta^{\top} \mathbf{x}$$</p>
+<p>which is a specific example of a more general linear combination of basis functions</p>
+<p>$$\hat{f}(\mathbf{x})=\theta_{1} b_{1}(\mathbf{x})+\cdots+\theta_{q} b_{q}(\mathbf{x})=\sum_{i=1}^{q} \theta_{i} b_{i}(\mathbf{x})=\theta^{\top} \mathbf{b}(\mathbf{x})$$</p>
+<p>This solves this problem</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\operatorname{minimize}_{\mathbf{\theta}}\|\mathbf{y}-\mathbf{B} \theta\|_{2}^{2}
+</span></code></pre>
+<h3 id="other-methods">Other methods</h3>
+<p>There are polynomial basis functions, sinosoidal and radial basis functions. All of these have their own curve fitting properties</p>
+<h3 id="fitting-noisy-objective-functions">Fitting Noisy Objective Functions</h3>
+<p>Models fit using regression will pass as close as possible to every design point. When the objective function evaluations are noisy, complex models are likely to excessively contort themselves to pass through every point. However, smoother fits are often better predictors of the true underlying objective function.</p>
+<p>We add <em>regularization</em> (L2) term to linear models specified above.</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\operatorname{minimize}_{\theta}\|\mathbf{y}-\mathbf{B} \theta\|_{2}^{2}+\lambda\|\mathbf{\theta}\|_{2}^{2}
+</span></code></pre>
+<h3 id="which-model-to-choose">Which model to choose?</h3>
+<p>Generalization error can be estimated using techniques such as holdout, k-fold cross validation, and the bootstrap.</p>
+<h2 id="probablistic-surrogate-models">Probablistic surrogate models</h2>
+<p>When using surrogate models for the purpose of optimization, it is often useful to quantify our confidence in the predictions of these models. One way to quantify our confidence is by taking a probabilistic approach to surrogate modeling. Most common one is <strong>Guassian Process</strong> which represents a distribution over functions.</p>
+<p>We use Gaussian processes to infer a distribution over the values of different design points given the values of previously evaluated design points. We can incorporate gradient information and noisy measurements of the objective functions.</p>
+<h3 id="guassian-distribution">Guassian distribution</h3>
+<p>n-dimensional is parameterized</p>
+<p>$$\mathcal{N}(\mathbf{x} | \boldsymbol{\mu}, \mathbf{\Sigma})=(2 \pi)^{-n / 2}|\mathbf{\Sigma}|^{-1 / 2} \exp \left(-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})\right)$$</p>
+<p>Covariance matrices are always positive semidefinite. Sampled value is</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}, \mathbf{\Sigma})
+</span></code></pre>
+<p>Some examples</p>
+<p><img src="https://cdn.mathpix.com/snip/images/bqFWltlkHv4WeYGf9lP0Ms4vLbmyhFxNdYidfbS6_n8.original.fullsize.png" alt="image" /></p>
+<p>Two jointly Gaussian random variables a and b can be written</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>\mathbf{a} \\
+</span><span>\mathbf{b}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right] \sim \mathcal{N}\left(\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>\boldsymbol{\mu}_{\mathbf{a}} \\
+</span><span>\boldsymbol{\mu}_{\mathbf{b}}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right],\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{ll}
+</span><span>\mathbf{A} &amp; \mathbf{C} \\
+</span><span>\mathbf{C}^{\top} &amp; \mathbf{B}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\right)
+</span></code></pre>
+<p>We choose <code>MvNormal</code> because <em>marginal distribution</em> for a vector of random variables is given by its corresponding mean and covariance</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\mathbf{a} \sim \mathcal{N}\left(\boldsymbol{\mu}_{\mathrm{a}}, \mathbf{A}\right) \quad \mathbf{b} \sim \mathcal{N}\left(\boldsymbol{\mu}_{\mathbf{b}}, \mathbf{B}\right)
+</span></code></pre>
+<p>and conditional distribution has a convenient closed form</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>\mathbf{a} | \mathbf{b} \sim \mathcal{N}\left(\mu_{\mathrm{a} | \mathbf{b}}, \mathbf{\Sigma}_{\mathrm{a} | \mathbf{b}}\right) \\
+</span><span>\boldsymbol{\mu}_{\mathrm{a} | \mathbf{b}}=\boldsymbol{\mu}_{\mathrm{a}}+\mathbf{C B}^{-1}\left(\mathbf{b}-\boldsymbol{\mu}_{\mathbf{b}}\right) \\
+</span><span>\mathbf{\Sigma}_{\mathrm{a} | \mathbf{b}}=\mathbf{A}-\mathbf{C B}^{-1} \mathbf{C}^{\top}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}
+</span></code></pre>
+<p>Simple example</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>x_{1} \\
+</span><span>x_{2}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right] \sim \mathcal{N}\left(\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>0 \\
+</span><span>1
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right],\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{ll}
+</span><span>3 &amp; 1 \\
+</span><span>1 &amp; 2
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\right)
+</span></code></pre>
+<p>The marginal distribution for $x_1$ is N (0, 3), and the marginal distribution for $x_2$ is $N (1, 2)$.</p>
+<p>The conditional distribution for $x_1$ given $x_2 = 2$ is</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span><span>\boldsymbol{\mu}_{</span><span style="color:#ffb964;">x</span><span>_{</span><span style="color:#cf6a4c;">1</span><span>} | </span><span style="color:#ffb964;">x</span><span>_{</span><span style="color:#cf6a4c;">2</span><span>}=</span><span style="color:#cf6a4c;">2</span><span>} &amp;=</span><span style="color:#cf6a4c;">0</span><span>+</span><span style="color:#cf6a4c;">1 </span><span>\cdot </span><span style="color:#cf6a4c;">2</span><span>^{-</span><span style="color:#cf6a4c;">1</span><span>} \cdot(</span><span style="color:#cf6a4c;">2</span><span>-</span><span style="color:#cf6a4c;">1</span><span>)=</span><span style="color:#cf6a4c;">0.5 </span><span>\\
+</span><span>\boldsymbol{\Sigma}_{</span><span style="color:#ffb964;">x</span><span>_{</span><span style="color:#cf6a4c;">1</span><span>} | </span><span style="color:#ffb964;">x</span><span>_{</span><span style="color:#cf6a4c;">2</span><span>}=</span><span style="color:#cf6a4c;">2</span><span>} &amp;=</span><span style="color:#cf6a4c;">3</span><span>-</span><span style="color:#cf6a4c;">1 </span><span>\cdot </span><span style="color:#cf6a4c;">1</span><span>^{-</span><span style="color:#cf6a4c;">1</span><span>} \cdot </span><span style="color:#cf6a4c;">1</span><span>=</span><span style="color:#cf6a4c;">2.5 </span><span>\\
+</span><span style="color:#ffb964;">x</span><span>_{</span><span style="color:#cf6a4c;">1</span><span>} |\left(</span><span style="color:#ffb964;">x</span><span>_{</span><span style="color:#cf6a4c;">2</span><span>}=</span><span style="color:#cf6a4c;">2</span><span>\right) &amp; \sim \mathcal{</span><span style="color:#ffb964;">N</span><span>}(</span><span style="color:#cf6a4c;">0.5</span><span>,</span><span style="color:#cf6a4c;">2.5</span><span>)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span></code></pre>
+<h3 id="guassian-processes">Guassian processes</h3>
+<p>we approximated the objective function f using a surrogate model function $f^{hat}$ fitted to previously evaluated design points. A special type of surrogate model known as a Gaussian process allows us not only to predict $f$ but also to quantify our uncertainty in that prediction using a probability distribution</p>
+<p>A Gaussian process is a distribution over functions. For any finite set of points $\left\{\mathbf{x}^{(1)}, \ldots, \mathbf{x}^{(m)}\right\}$, the associated function evaluations $\left\{y_{1}, \ldots, y_{m}\right\}$ are distributed according to:</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>y_{1} \\
+</span><span>\vdots \\
+</span><span>y_{m}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right] \sim \mathcal{N}\left(\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>m\left(\mathbf{x}^{(1)}\right) \\
+</span><span>\vdots \\
+</span><span>m\left(\mathbf{x}^{(m)}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right],\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{ccc}
+</span><span>k\left(\mathbf{x}^{(1)}, \mathbf{x}^{(1)}\right) &amp; \cdots &amp; k\left(\mathbf{x}^{(1)}, \mathbf{x}^{(m)}\right) \\
+</span><span>\vdots &amp; \ddots &amp; \vdots \\
+</span><span>k\left(\mathbf{x}^{(m)}, \mathbf{x}^{(1)}\right) &amp; \cdots &amp; k\left(\mathbf{x}^{(m)}, \mathbf{x}^{(m)}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\right)
+</span></code></pre>
+<p>where m(x) ($m(\mathbf{x})=\mathbb{E}[f(\mathbf{x})]$ ) is <em>mean function</em> and k(x, x') ( $k\left(\mathbf{x}, \mathbf{x}^{\prime}\right)=$
+$\mathbb{E}\left[(f(\mathbf{x})-m(\mathbf{x}))\left(f\left(\mathbf{x}^{\prime}\right)-m\left(\mathbf{x}^{\prime}\right)\right)\right]$ ) is <em>covariance function</em> or <em><strong>kernel</strong></em>. The mean function can represent prior knowledge about the function. The kernel controls the smoothness of the functions.</p>
+<p>Example psuedo code</p>
+<p><img src="https://cdn.mathpix.com/snip/images/xknDFDS7v7rpHb8GLvDsCm_Z3BzWYulKP4MnYryx1mw.original.fullsize.png" alt="image" /></p>
+<p>Common kernel function is squared exponential. There are several others, usually they use <code>r</code> which is euclidean distance between x and x'. Matern Kernel uses gamma function and and Kν(x) is the modified Bessel function of the second kind, for example</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\frac{2^{1-v}}{\Gamma(v)}\left(\sqrt{2 v} \frac{r}{\ell}\right)^{v} K_{v}\left(\sqrt{2 v} \frac{r}{\ell}\right)
+</span></code></pre>
+<h3 id="prediction">Prediction</h3>
+<p>Suppose we already have a set of points X and the corresponding y, but we wish to predict the values yˆ at points $X^{*}$. The joint distribution is</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>\hat{\mathbf{y}} \\
+</span><span>\mathbf{y}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right] \sim \mathcal{N}\left(\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>\mathbf{m}\left(X^{*}\right) \\
+</span><span>\mathbf{m}(X)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right],\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{ll}
+</span><span>\mathbf{K}\left(X^{*}, X^{*}\right) &amp; \mathbf{K}\left(X^{*}, X\right) \\
+</span><span>\mathbf{K}\left(X, X^{*}\right) &amp; \mathbf{K}(X, X)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\right)
+</span></code></pre>
+<p>where m and k are</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span><span>\mathbf{</span><span style="color:#ffb964;">m</span><span>}(</span><span style="color:#ffb964;">X</span><span>) &amp;=\left[</span><span style="color:#ffb964;">m</span><span>\left(\mathbf{</span><span style="color:#ffb964;">x</span><span>}^{(</span><span style="color:#cf6a4c;">1</span><span>)}\right), \ldots, </span><span style="color:#ffb964;">m</span><span>\left(\mathbf{</span><span style="color:#ffb964;">x</span><span>}^{(</span><span style="color:#ffb964;">n</span><span>)}\right)\right] \\
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>^{\prime}\right) &amp;=\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{</span><span style="color:#ffb964;">ccc</span><span>}
+</span><span style="color:#ffb964;">k</span><span>\left(\mathbf{</span><span style="color:#ffb964;">x</span><span>}^{(</span><span style="color:#cf6a4c;">1</span><span>)}, \mathbf{</span><span style="color:#ffb964;">x</span><span>}^{\prime}(</span><span style="color:#cf6a4c;">1</span><span>)\right. &amp; \cdots &amp; </span><span style="color:#ffb964;">k</span><span>\left(\mathbf{</span><span style="color:#ffb964;">x</span><span>}^{(</span><span style="color:#cf6a4c;">1</span><span>)}, \mathbf{</span><span style="color:#ffb964;">x</span><span>}^{\prime(</span><span style="color:#ffb964;">m</span><span>)}\right) \\
+</span><span>\vdots &amp; \ddots &amp; \vdots \\
+</span><span style="color:#ffb964;">k</span><span>\left(\mathbf{</span><span style="color:#ffb964;">x</span><span>}^{(</span><span style="color:#ffb964;">n</span><span>)}, \mathbf{</span><span style="color:#ffb964;">x</span><span>}^{\prime(</span><span style="color:#cf6a4c;">1</span><span>)}\right) &amp; \cdots &amp; </span><span style="color:#ffb964;">k</span><span>\left(\mathbf{</span><span style="color:#ffb964;">x</span><span>}^{(</span><span style="color:#ffb964;">n</span><span>)}, \mathbf{</span><span style="color:#ffb964;">x</span><span>}^{\prime(</span><span style="color:#ffb964;">m</span><span>)}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span></code></pre>
+<p>Therefore the conditional distribution is given by,</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\hat{\mathbf{y}} | \mathbf{y} \sim \mathcal{N}(\underbrace{\mathbf{m}\left(X^{*}\right)+\mathbf{K}\left(X^{*}, X\right) \mathbf{K}(X, X)^{-1}(\mathbf{y}-\mathbf{m}(X))}_{\text {mean }}, \underbrace{\mathbf{K}\left(X^{*}, X^{*}\right)-\mathbf{K}\left(X^{*}, X\right) \mathbf{K}(X, X)^{-1} \mathbf{K}\left(X, X^{*}\right)}_{\text {covariance }})
+</span></code></pre>
+<p>Note, that the covariance is not dependent on y. This distribution is often referred to as the posterior distribution. In julia, <code>mvnrand(μ(X, GP.m), Σ(X, GP.k))</code>. The predicted mean</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span><span>\hat{\mu}(\mathbf{</span><span style="color:#ffb964;">x</span><span>}) &amp;=</span><span style="color:#ffb964;">m</span><span>(\mathbf{</span><span style="color:#ffb964;">x</span><span>})+\mathbf{</span><span style="color:#ffb964;">K</span><span>}(\mathbf{</span><span style="color:#ffb964;">x</span><span>}, </span><span style="color:#ffb964;">X</span><span>) \mathbf{</span><span style="color:#ffb964;">K</span><span>}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>)^{-</span><span style="color:#cf6a4c;">1</span><span>}(\mathbf{</span><span style="color:#ffb964;">y</span><span>}-\mathbf{</span><span style="color:#ffb964;">m</span><span>}(</span><span style="color:#ffb964;">X</span><span>)) \\
+</span><span>&amp;=</span><span style="color:#ffb964;">m</span><span>(\mathbf{</span><span style="color:#ffb964;">x</span><span>})+\boldsymbol{\theta}^{\top} \mathbf{</span><span style="color:#ffb964;">K</span><span>}(</span><span style="color:#ffb964;">X</span><span>, \mathbf{</span><span style="color:#ffb964;">x</span><span>})
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span></code></pre>
+<p>where $\boldsymbol{\theta}=\mathbf{K}(X, X)^{-1}(\mathbf{y}-\mathbf{m}(X))$</p>
+<p><em>The value of the Gaussian process beyond the surrogate models discussed previously is that it also quantifies our uncertainty in our predictions.</em></p>
+<p>The variance of the predicted mean can also be obtained as a function of x: $\hat{v}(\mathbf{x})=\mathbf{K}(\mathbf{x}, \mathbf{x})-\mathbf{K}(\mathbf{x}, X) \mathbf{K}(X, X)^{-1} \mathbf{K}(X, \mathbf{x})$</p>
+<h3 id="incorporating-gradient-measurements">Incorporating gradient measurements</h3>
+<p>Gaussian processes can be extended to incorporate gradients</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>\mathbf{y} \\
+</span><span>\nabla \mathbf{y}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right] \sim \mathcal{N}\left(\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>\mathbf{m}_{f} \\
+</span><span>\mathbf{m}_{\nabla}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right],\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{cc}
+</span><span>\mathbf{K}_{f f} &amp; \mathbf{K}_{f \nabla} \\
+</span><span>\mathbf{K}_{\nabla f} &amp; \mathbf{K}_{\nabla \nabla}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\right)
+</span></code></pre>
+<p>where $\mathbf{y} \sim \mathcal{N}\left(\mathbf{m}_{f}, \mathbf{K}_{f f}\right)$ is a traditional guassian process, $m_{\nabla}$ is a mean function of the gradient, $K_{\nabla f}$ is covariance matrix between function values and gradients etc.</p>
+<p>The linearity of Gaussians causes these covariance functions to be related</p>
+<p>$\begin{aligned} k_{f f}\left(\mathbf{x}, \mathbf{x}^{\prime}\right) &amp;=k\left(\mathbf{x}, \mathbf{x}^{\prime}\right) \ k_{\nabla f}\left(\mathbf{x}, \mathbf{x}^{\prime}\right) &amp;=\nabla_{\mathbf{x}} k\left(\mathbf{x}, \mathbf{x}^{\prime}\right) \ k_{f \nabla}\left(\mathbf{x}, \mathbf{x}^{\prime}\right) &amp;=\nabla_{\mathbf{x}^{\prime}} k\left(\mathbf{x}, \mathbf{x}^{\prime}\right) \ k_{\nabla \nabla}\left(\mathbf{x}, \mathbf{x}^{\prime}\right) &amp;=\nabla_{\mathbf{x}} \nabla_{\mathbf{x}^{\prime}} k\left(\mathbf{x}, \mathbf{x}^{\prime}\right) \end{aligned}$</p>
+<p>Prediction can be accomplished in the same manner as with a traditional Gaussian process. We first construct the joint distribution</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>\hat{\mathbf{y}} \\
+</span><span>\mathbf{y} \\
+</span><span>\nabla \mathbf{y}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right] \sim \mathcal{N}\left(\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>\mathbf{m}_{f}\left(X^{*}\right) \\
+</span><span>\mathbf{m}_{f}(X) \\
+</span><span>\mathbf{m}_{\nabla}(X)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right],\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{ccc}
+</span><span>\mathbf{K}_{f f}\left(X^{*}, X^{*}\right) &amp; \mathbf{K}_{f f}\left(X^{*}, X\right) &amp; \mathbf{K}_{f \nabla}\left(X^{*}, X\right) \\
+</span><span>\mathbf{K}_{f f}\left(X, X^{*}\right) &amp; \mathbf{K}_{f f}(X, X) &amp; \mathbf{K}_{f \nabla}(X, X) \\
+</span><span>\mathbf{K}_{\nabla f}\left(X, X^{*}\right) &amp; \mathbf{K}_{\nabla f}(X, X) &amp; \mathbf{K}_{\nabla \nabla}(X, X)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\right)
+</span></code></pre>
+<p>The conditional distribution follows the same Gaussian relations as in equation</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\hat{\mathbf{y}} | \mathbf{y}, \nabla \mathbf{y} \sim \mathcal{N}\left(\boldsymbol{\mu}_{\nabla}, \mathbf{\Sigma}_{\nabla}\right)
+</span></code></pre>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span><span>&amp;\boldsymbol{\mu}_{\nabla}=\mathbf{</span><span style="color:#ffb964;">m</span><span>}_{</span><span style="color:#ffb964;">f</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>^{*}\right)+\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{</span><span style="color:#ffb964;">c</span><span>}
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{</span><span style="color:#ffb964;">f f</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>^{*}\right) \\
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{\nabla </span><span style="color:#ffb964;">f</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>^{*}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]^{\top}\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{</span><span style="color:#ffb964;">cc</span><span>}
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{</span><span style="color:#ffb964;">f f</span><span>}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>) &amp; \mathbf{</span><span style="color:#ffb964;">K</span><span>}_{</span><span style="color:#ffb964;">f </span><span>\nabla}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>) \\
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{\nabla </span><span style="color:#ffb964;">f</span><span>}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>) &amp; \mathbf{</span><span style="color:#ffb964;">K</span><span>}_{\nabla \nabla}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]^{-</span><span style="color:#cf6a4c;">1</span><span>}\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{</span><span style="color:#ffb964;">c</span><span>}
+</span><span>\mathbf{</span><span style="color:#ffb964;">y</span><span>}-\mathbf{</span><span style="color:#ffb964;">m</span><span>}_{</span><span style="color:#ffb964;">f</span><span>}(</span><span style="color:#ffb964;">X</span><span>) \\
+</span><span>\nabla \mathbf{</span><span style="color:#ffb964;">y</span><span>}-\mathbf{</span><span style="color:#ffb964;">m</span><span>}_{\nabla}(</span><span style="color:#ffb964;">X</span><span>)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\\
+</span><span>&amp;\boldsymbol{\Sigma}_{\nabla}=\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{</span><span style="color:#ffb964;">f f</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>^{*}, </span><span style="color:#ffb964;">X</span><span>^{*}\right)-\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{</span><span style="color:#ffb964;">cc</span><span>}
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{</span><span style="color:#ffb964;">f f</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>^{*}\right) \\
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{\nabla </span><span style="color:#ffb964;">f</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>^{*}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]^{\top}\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{</span><span style="color:#ffb964;">cc</span><span>}
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{</span><span style="color:#ffb964;">f f</span><span>}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>) &amp; \mathbf{</span><span style="color:#ffb964;">K</span><span>}_{</span><span style="color:#ffb964;">f </span><span>\nabla}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>) \\
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{\nabla </span><span style="color:#ffb964;">f</span><span>}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>) &amp; \mathbf{</span><span style="color:#ffb964;">K</span><span>}_{\nabla \nabla}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]^{-</span><span style="color:#cf6a4c;">1</span><span>}\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{</span><span style="color:#ffb964;">c</span><span>}
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{</span><span style="color:#ffb964;">f f</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>^{*}\right) \\
+</span><span>\mathbf{</span><span style="color:#ffb964;">K</span><span>}_{\nabla </span><span style="color:#ffb964;">f</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>^{*}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span></code></pre>
+<h3 id="incorporating-noisy-measurements">Incorporating noisy measurements</h3>
+<p>Joint distribution</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>\hat{\mathbf{y}} \\
+</span><span>\mathbf{y}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right] \sim \mathcal{N}\left(\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{l}
+</span><span>\mathbf{m}\left(X^{*}\right) \\
+</span><span>\mathbf{m}(X)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right],\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{ll}
+</span><span>\mathbf{K}\left(X^{*}, X^{*}\right) &amp; \mathbf{K}\left(X^{*}, X\right) \\
+</span><span>\mathbf{K}\left(X, X^{*}\right) &amp; \mathbf{K}(X, X)+v \mathbf{I}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\right)
+</span></code></pre>
+<p>with conditional distribution</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span><span>\hat{\mathbf{</span><span style="color:#ffb964;">y</span><span>}} | \mathbf{</span><span style="color:#ffb964;">y</span><span>}, \nu &amp; \sim \mathcal{</span><span style="color:#ffb964;">N</span><span>}\left(\boldsymbol{\mu}^{*}, \mathbf{\Sigma}^{*}\right) \\
+</span><span>\boldsymbol{\mu}^{*} &amp;=\mathbf{</span><span style="color:#ffb964;">m</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>^{*}\right)+\mathbf{</span><span style="color:#ffb964;">K</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>^{*}, </span><span style="color:#ffb964;">X</span><span>\right)(\mathbf{</span><span style="color:#ffb964;">K</span><span>}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>)+</span><span style="color:#ffb964;">v </span><span>\mathbf{</span><span style="color:#ffb964;">I</span><span>})^{-</span><span style="color:#cf6a4c;">1</span><span>}(\mathbf{</span><span style="color:#ffb964;">y</span><span>}-\mathbf{</span><span style="color:#ffb964;">m</span><span>}(</span><span style="color:#ffb964;">X</span><span>)) \\
+</span><span>\boldsymbol{\Sigma}^{*} &amp;=\mathbf{</span><span style="color:#ffb964;">K</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>^{*}, </span><span style="color:#ffb964;">X</span><span>^{*}\right)-\mathbf{</span><span style="color:#ffb964;">K</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>^{*}, </span><span style="color:#ffb964;">X</span><span>\right)(\mathbf{</span><span style="color:#ffb964;">K</span><span>}(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>)+</span><span style="color:#ffb964;">v </span><span>\mathbf{</span><span style="color:#ffb964;">I</span><span>})^{-</span><span style="color:#cf6a4c;">1</span><span>} \mathbf{</span><span style="color:#ffb964;">K</span><span>}\left(</span><span style="color:#ffb964;">X</span><span>, </span><span style="color:#ffb964;">X</span><span>^{*}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span></code></pre>
+<h3 id="fitting-guassian-processes">Fitting guassian processes</h3>
+<p>The choice of kernel and parameters has a large effect on the form of the Gaussian process between evaluated design points.</p>
+<p>Kernels and their parameters can be chosen using cross validation introduced in the previous chapter. Instead of minimizing the squared error on the test data, we maximize the likelihood of the data.</p>
+<blockquote>
+<p>Likelihood math is hand-written in Cross Entropy method</p>
+</blockquote>
+<p>We want the parameters $\theta$ that maximizes $p(\mathbf{y} | X, \boldsymbol{\theta})$. The likelihood of the data is the probability that the observed points were drawn from the model.</p>
+<p>We use log likelihood,</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\log p(\mathbf{y} | X, v, \mathbf{\theta})=-\frac{n}{2} \log 2 \pi-\frac{1}{2} \log \left|\mathbf{K}_{\mathbf{\theta}}(X, X)+v \mathbf{I}\right|-\frac{1}{2}\left(\mathbf{y}-\mathbf{m}_{\mathbf{\theta}}(X)\right)^{\top}\left(\mathbf{K}_{\mathbf{\theta}}(X, X)+v \mathbf{I}\right)^{-1}\left(\mathbf{y}-\mathbf{m}_{\mathbf{\theta}}(X)\right)
+</span></code></pre>
+<p>Let us assume a zero mean such that $\mathbf{m}_{\theta}(X)=\mathbf{0}$ and $\theta$ refers only to the parameters for the Gaussian process covariance function. We can arrive at a maximum likelihood estimate by gradient ascent.</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\frac{\partial}{\partial \theta_{j}} \log p(\mathbf{y} | X, \theta)=\frac{1}{2} \mathbf{y}^{\top} \mathbf{K}^{-1} \frac{\partial \mathbf{K}}{\partial \theta_{j}} \mathbf{K}^{-1} \mathbf{y}-\frac{1}{2} \operatorname{tr}\left(\mathbf{\Sigma}_{\mathbf{\theta}}^{-1} \frac{\partial \mathbf{K}}{\partial \theta_{j}}\right)
+</span></code></pre>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\mathbf{\Sigma}_{\mathbf{\theta}}=\mathbf{K}_{\mathbf{\theta}}(X, X)+v \mathbf{I}
+</span></code></pre>
+<p>Results:</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span><span>\frac{\partial \mathbf{</span><span style="color:#ffb964;">K</span><span>}^{-</span><span style="color:#cf6a4c;">1</span><span>}}{\partial \boldsymbol{\theta}_{</span><span style="color:#ffb964;">j</span><span>}} &amp;=-\mathbf{</span><span style="color:#ffb964;">K</span><span>}^{-</span><span style="color:#cf6a4c;">1</span><span>} \frac{\partial \mathbf{</span><span style="color:#ffb964;">K</span><span>}}{\partial \boldsymbol{\theta}_{</span><span style="color:#ffb964;">j</span><span>}} \mathbf{</span><span style="color:#ffb964;">K</span><span>}^{-</span><span style="color:#cf6a4c;">1</span><span>} \\
+</span><span>\frac{\partial \log |\mathbf{</span><span style="color:#ffb964;">K</span><span>}|}{\partial \boldsymbol{\theta}_{</span><span style="color:#ffb964;">j</span><span>}} &amp;=\operatorname{</span><span style="color:#ffb964;">tr</span><span>}\left(\mathbf{</span><span style="color:#ffb964;">K</span><span>}^{-</span><span style="color:#cf6a4c;">1</span><span>} \frac{\partial \mathbf{</span><span style="color:#ffb964;">K</span><span>}}{\partial \boldsymbol{\theta}_{</span><span style="color:#ffb964;">j</span><span>}}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span></code></pre>
+<h2 id="optimization-using-guassian-process-optimization">Optimization using Guassian process optimization</h2>
+<p>The last section discusses how to predict at a new point. We derived equations for estimating yhat at any new point. But how do we know which point to evaluate?
+We want to move to a design point that minimizes our objective function.</p>
+<h3 id="prediction-based-exploration">Prediction based exploration</h3>
+<p>In prediction-based exploration, we select the minimizer of the surrogate function.
+An example of this approach is the quadratic fit. With quadratic fit search, we use a quadratic surrogate model to fit the last three bracketing points and then select the point at the minimum of the quadratic function.</p>
+<p>If we use a Gaussian process surrogate model, prediction-based optimization has us select the minimizer of the mean function</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span><span>&amp;\mathbf{</span><span style="color:#ffb964;">x</span><span>}^{(</span><span style="color:#ffb964;">m</span><span>+</span><span style="color:#cf6a4c;">1</span><span>)}=\arg \min _{</span><span style="color:#ffb964;">x </span><span>\in \mathcal{</span><span style="color:#ffb964;">X</span><span>}} \hat{\mu}(\mathbf{</span><span style="color:#ffb964;">x</span><span>})
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span></code></pre>
+<p>where $\hat{\mu}(\mathbf{x})$ is the predicted mean of a Gaussian process at a design point x based on the previous m design points. This is not efficient. Prediction-based optimization does not take uncertainty into account, and new samples can be generated very close to existing samples rendering function evalutions useless.</p>
+<h3 id="error-based-exploration">Error based exploration</h3>
+<p>Error-based exploration seeks to increase confidence in the true function. A Gaussian process can tell us both the mean and standard deviation at every point. A large standard deviation indicates low confidence, so error-based exploration samples at design points with maximum uncertainty.</p>
+<p>The next sample point</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span><span>&amp;\mathbf{</span><span style="color:#ffb964;">x</span><span>}^{(</span><span style="color:#ffb964;">m</span><span>+</span><span style="color:#cf6a4c;">1</span><span>)}=\arg \min _{</span><span style="color:#ffb964;">x </span><span>\in \mathcal{</span><span style="color:#ffb964;">X</span><span>}} \hat{\sigma}(\mathbf{</span><span style="color:#ffb964;">x</span><span>})
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">aligned</span><span>}
+</span></code></pre>
+<p>Optimization problems with unbounded feasible sets will always have high uncertainty far away from sampled points, making it impossible to become confident in the true underlying function over the entire domain</p>
+<h3 id="lower-confidence-bound-exploration">Lower confidence bound exploration</h3>
+<p>Lower confidence bound exploration trades off between greedy minimization employed by prediction-based optimization and uncertainty reduction employed by error-based exploration. The next sample minimizes the lower confidence bound of the objective function</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>L B(\mathbf{x})=\hat{\mu}(\mathbf{x})-\alpha \hat{\sigma}(\mathbf{x})
+</span></code></pre>
+<p>where α ≥ 0 is a constant that controls the trade-off between exploration and exploitation. Exploration involves minimizing uncertainty, and exploitation involves minimizing the predicted mean</p>
+<p><img src="https://cdn.mathpix.com/snip/images/hTnw50c9dDwDJHh7c_Y4LTBuh6zdA1s5Y2jVxcqj17g.original.fullsize.png" alt="image" /></p>
+<h2 id="summary">Summary</h2>
+<p>In essence, we have initial y, X for original objective function. We approximate using Guassian process using the formula</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>y_{1} \\
+</span><span>\vdots \\
+</span><span>y_{m}
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right] \sim \mathcal{N}\left(\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{c}
+</span><span>m\left(\mathbf{x}^{(1)}\right) \\
+</span><span>\vdots \\
+</span><span>m\left(\mathbf{x}^{(m)}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right],\left[</span><span style="color:#8fbfdc;">\begin</span><span>{</span><span style="color:#ffb964;">array</span><span>}{ccc}
+</span><span>k\left(\mathbf{x}^{(1)}, \mathbf{x}^{(1)}\right) &amp; \cdots &amp; k\left(\mathbf{x}^{(1)}, \mathbf{x}^{(m)}\right) \\
+</span><span>\vdots &amp; \ddots &amp; \vdots \\
+</span><span>k\left(\mathbf{x}^{(m)}, \mathbf{x}^{(1)}\right) &amp; \cdots &amp; k\left(\mathbf{x}^{(m)}, \mathbf{x}^{(m)}\right)
+</span><span style="color:#8fbfdc;">\end</span><span>{</span><span style="color:#ffb964;">array</span><span>}\right]\right)
+</span></code></pre>
+<p>We get next sample design point and evaluate/update our gaussian process model (x, y) using yhat formula above. Then we get another design point, evaluate/update our surrogate model.</p>
+<p>Remember the equation shown below has $m(x^{*})$ which is $E[f(x^{*})]$ which requires main objective function evaluation for updating posterior.</p>
+<blockquote>
+<p>Hence, updating posterior requires finding new design point and updating our gaussian process model. We use xnew and it's evaluation on out main objective function. Once we make our gaussian process model more robust after adequate iterations, our new design point is our minimum. For sampling new design point, refer to Lower confidence bound exploration.</p>
+</blockquote>
+<p>Taken from BO link.</p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">update_posterior</span><span>(</span><span style="color:#ffb964;">x_new</span><span>):
+</span><span>    y = </span><span style="color:#ffb964;">f</span><span>(x_new) </span><span style="color:#888888;"># evaluate f at new point.
+</span><span>    X = torch.</span><span style="color:#ffb964;">cat</span><span>([gpmodel.X, x_new]) </span><span style="color:#888888;"># incorporate new evaluation
+</span><span>    y = torch.</span><span style="color:#ffb964;">cat</span><span>([gpmodel.y, y])
+</span><span>    gpmodel.</span><span style="color:#ffb964;">set_data</span><span>(X, y)
+</span><span>    </span><span style="color:#888888;"># optimize the GP hyperparameters using Adam with lr=0.001
+</span><span>    optimizer = torch.optim.</span><span style="color:#ffb964;">Adam</span><span>(gpmodel.</span><span style="color:#ffb964;">parameters</span><span>(), </span><span style="color:#ffb964;">lr</span><span>=</span><span style="color:#cf6a4c;">0.001</span><span>)
+</span><span>    gp.util.</span><span style="color:#ffb964;">train</span><span>(gpmodel, optimizer)
+</span><span>
+</span></code></pre>
+<p>same as</p>
+<pre data-lang="latex" style="background-color:#151515;color:#e8e8d3;" class="language-latex "><code class="language-latex" data-lang="latex"><span>\hat{\mathbf{y}} | \mathbf{y} \sim \mathcal{N}(\underbrace{\mathbf{m}\left(X^{*}\right)+\mathbf{K}\left(X^{*}, X\right) \mathbf{K}(X, X)^{-1}(\mathbf{y}-\mathbf{m}(X))}_{\text {mean }}, \underbrace{\mathbf{K}\left(X^{*}, X^{*}\right)-\mathbf{K}\left(X^{*}, X\right) \mathbf{K}(X, X)^{-1} \mathbf{K}\left(X, X^{*}\right)}_{\text {covariance }})
+</span></code></pre>
+<p>Note that the covariance does not depend on y. This distribution is often referred to as the posterior distribution.</p>
+<p>After doing this for a multiple points, we finally converge to our global minimum on our main objective function.</p>
+<p><a href="https://pyro.ai/examples/bo.html">Bayesian optimization in Pyro</a> discusses the code for this. It's very helpful.</p>
+<p>The Bayesian optimization strategy works as follows:</p>
+<ul>
+<li>
+<p>Place a prior on the objective function $f$</p>
+</li>
+<li>
+<p>Each time we evaluate $f$ at a new point $x_{n}$, we update our model for $f(x)$. This model serves as a surrogate objective function and reflects our beliefs about $f$ (in particular it reflects our beliefs about where we expect $f(x)$ to be close to $f(x^{*})$</p>
+</li>
+<li>
+<p>Since we are being Bayesian, our beliefs are encoded in a posterior that allows us to systematically reason about the uncertainty of our model predictions.</p>
+</li>
+<li>
+<p>Use the posterior to derive an “acquisition” (prediction based, error based or lower bound) function $\alpha(x)$ that is easy to evaluate and differentiate (so that optimizing $\alpha(x)$ is easy). In contrast to $f(x)$, we will generally evaluate $\alpha(x)$ at many points $x$, since doing so will be cheap.</p>
+</li>
+<li>
+<p>Repeat until convergence</p>
+</li>
+</ul>
+<p>Next design point:</p>
+<ul>
+<li>
+<p>Use the acquisition function to derive the next query point according to $x_{n+1}=\arg \min \alpha(x)$</p>
+</li>
+<li>
+<p>Evaluate $f(x_{n+1})$ and update the posterior.</p>
+</li>
+</ul>
+
+    </article>
+</section>
+</article>
+    <footer>
+        <div class="social">
+            <ul>
+                <li>
+                    <a href="https://github.com" title="Github"><i data-feather="github"></i></a>
+                </li>
+                <li>
+                    <a href="https://twitter.com" title="Twitter"><i data-feather="twitter"></i></a>
+                </li>
+                <li>
+                    <a href="https://trickster.github.io/ atom.xml" title="trickster"><i
+                            data-feather="rss"></i></a>
+                </li>
+            </ul>
+        </div>
+        <p>
+            © trickster 2022<br>
+            Powered by <a target="_blank" href="https://getzola.org/">Zola</a>
+        </p>
+    </footer>
+    <noscript><img src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/pixel.gif"></noscript>
+    <script src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+
+</html>

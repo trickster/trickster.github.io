@@ -1,0 +1,56 @@
+@font-face {
+    font-family: 'Iowan Old Style';
+    font-style: bold-italic;
+    font-weight: 500;
+    src: url('../fonts/iowan-old-style/bold-italic.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Iowan Old Style';
+    font-style: bold;
+    font-weight: 500;
+    src: url('../fonts/iowan-old-style/bold.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Iowan Old Style';
+    font-style: italic;
+    font-weight: 500;
+    src: url('../fonts/iowan-old-style/italic.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Iowan Old Style';
+    font-style: normal;
+    font-weight: 500;
+    src: url('../fonts/iowan-old-style/regular.ttf') format('truetype')
+}
+
+/* This is Dossier */
+@font-face {
+    font-family: 'Dossier';
+    font-style: bold-italic;
+    font-weight: 500;
+    src: url('../fonts/Dossier/Dossier\ Bold\ Italic.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Dossier';
+    font-style: bold;
+    font-weight: 500;
+    src: url('../fonts/Dossier/Dossier\ Bold.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Dossier';
+    font-style: italic;
+    font-weight: 500;
+    src: url('../fonts/Dossier/Dossier\ Italic.ttf') format('truetype')
+}
+
+@font-face {
+    font-family: 'Dossier';
+    font-style: normal;
+    font-weight: 500;
+    src: url('../fonts/Dossier/Dossier\ Regular.ttf') format('truetype')
+}

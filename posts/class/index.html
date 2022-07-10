@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="dev log" />
+<meta name="keywords" content="trickster" />
+
+<title>trickster | Advanced python</title>
+<meta property="og:title" content="trickster | Advanced python" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://trickster.github.io/posts/class/" />
+<meta property="og:description" content="Data classes, property setters and getters" />
+<meta property="og:image" content="" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Advanced python" />
+<meta name="twitter:description" content="Data classes, property setters and getters" />
+<meta property="twitter:image" content="" />
+
+
+    <link rel="alternate" type="application/rss+xml" title="trickster" href="https://trickster.github.io/ atom.xml">
+    
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"> 
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet"> -->
+
+    <link rel="stylesheet" href="https://trickster.github.io/css/base.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"
+        integrity="sha512-7x3zila4t2qNycrtZ31HO0NnJr8kg2VI67YLoRSyi9hGhRN66FHYWr7Axa9Y1J9tGYHVBPqIjSE1ogHrJTz51g=="
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <header>
+        <a class="site-name" href="/">
+            <h1>trickster</h1>
+        </a>
+        <div class="site-description">
+            <p>notes</p>
+        </div>
+        <nav>
+            <div class="links">
+                
+                
+                <a 
+                    href="https://trickster.github.io/ ">Home
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/posts/ ">Blog
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/tags/ ">Tags
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/projects/ ">Projects
+                </a>
+                
+                
+                <a 
+                    href="https://trickster.github.io/contact/ ">Contact
+                </a>
+                
+            </div>
+        </nav>
+    </header>
+    <article>
+
+<section class="post">
+    <div class="post-header">
+        <div class="meta">
+            <div class="date">
+                <span class="day">28</span>
+                <span class="rest">May 2020</span>
+            </div>
+        </div>
+
+        <div class="matter">
+            <h1 class="title">Advanced python</h1>
+        </div>
+    </div>
+    <article>
+        <p><em><strong>Disclaimer: Everything below is typed Python</strong></em></p>
+<h2 id="dataclasses">Dataclasses</h2>
+<p>The following snippet, desugars to</p>
+<p><em>Snippet 1:</em></p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span>@</span><span style="color:#ffb964;">dataclass
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">Person</span><span>:
+</span><span>    name: str
+</span><span>    age: float
+</span></code></pre>
+<p><em>Snippet 2:</em></p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">Person</span><span>:
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">__init__</span><span>(</span><span style="color:#ffb964;">self</span><span>, </span><span style="color:#ffb964;">name</span><span>: str, </span><span style="color:#ffb964;">age</span><span>: float):
+</span><span>        </span><span style="color:#ffb964;">self</span><span>.name = name
+</span><span>        </span><span style="color:#ffb964;">self</span><span>.age = age
+</span></code></pre>
+<p>There are two patterns to create dataclasses</p>
+<ol>
+<li>Immutable class</li>
+<li>Mutable class</li>
+</ol>
+<h3 id="immutable-dataclasses">Immutable dataclasses</h3>
+<p><em>Snippet 3:</em></p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span>@</span><span style="color:#ffb964;">dataclass</span><span>(</span><span style="color:#ffb964;">frozen</span><span>=True)
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">Person</span><span>:
+</span><span>
+</span><span>    name: str
+</span><span>    age: float
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">classmethod
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">from_birthyear</span><span>(</span><span style="color:#ffb964;">cls</span><span>, </span><span style="color:#ffb964;">name</span><span>: str, </span><span style="color:#ffb964;">birth_year</span><span>: int) -&gt; Person:
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#ffb964;">cls</span><span>(name, date.</span><span style="color:#ffb964;">today</span><span>().year - birth_year)
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">staticmethod
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">from_fathers_age</span><span>(
+</span><span>        </span><span style="color:#ffb964;">name</span><span>: str, </span><span style="color:#ffb964;">fathers_age</span><span>: int, </span><span style="color:#ffb964;">diff_from_fathers_age</span><span>: int
+</span><span>    ) -&gt; Person:
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#ffb964;">Person</span><span>(name, fathers_age - diff_from_fathers_age)
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">staticmethod
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">nationality</span><span>() -&gt; str:
+</span><span>        </span><span style="color:#888888;">&quot;&quot;&quot; All are japanese &quot;&quot;&quot;
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Japan</span><span style="color:#556633;">&quot;
+</span><span>
+</span><span>
+</span><span style="color:#ffb964;">print</span><span>(Person.</span><span style="color:#ffb964;">nationality</span><span>())
+</span><span>
+</span><span style="color:#ffb964;">print</span><span>(Person.</span><span style="color:#ffb964;">from_fathers_age</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Siva</span><span style="color:#556633;">&quot;</span><span>, </span><span style="color:#cf6a4c;">60</span><span>, </span><span style="color:#cf6a4c;">32</span><span>))
+</span><span>
+</span><span>me = Person.</span><span style="color:#ffb964;">from_birthyear</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Siva</span><span style="color:#556633;">&quot;</span><span>, </span><span style="color:#cf6a4c;">1992</span><span>)
+</span><span style="color:#ffb964;">print</span><span>(me.age)
+</span></code></pre>
+<h3 id="mutable-dataclasses">Mutable dataclasses</h3>
+<p>Field names can start with underscore, so that <code>@property</code> getters can use the method names without underscore at the beginning. Private fields are to be started with double underscores. <code>name</code> does not work as a field name, but <code>_name</code> is fine. We can then create <code>@property</code> with method name as <code>name</code>. It's a good practice to <strong>access the fields using property getters</strong>.</p>
+<p><em>Snippet 4:</em></p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span>@</span><span style="color:#ffb964;">dataclass
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">MutablePerson</span><span>:
+</span><span>    </span><span style="color:#888888;">&quot;&quot;&quot;
+</span><span style="color:#888888;"> Another note:
+</span><span style="color:#888888;"> _name works but not name, because I created a property name &quot;name&quot; was created for it
+</span><span style="color:#888888;"> &quot;&quot;&quot;
+</span><span>
+</span><span>    _name: str
+</span><span>    __age: float
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">classmethod
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">from_birthyear</span><span>(</span><span style="color:#ffb964;">cls</span><span>, </span><span style="color:#ffb964;">name</span><span>: str, </span><span style="color:#ffb964;">birth_year</span><span>: int) -&gt; Person:
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#ffb964;">cls</span><span>(name, date.</span><span style="color:#ffb964;">today</span><span>().year - birth_year)
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">staticmethod
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">from_fathers_age</span><span>(
+</span><span>        </span><span style="color:#ffb964;">name</span><span>: str, </span><span style="color:#ffb964;">fathers_age</span><span>: int, </span><span style="color:#ffb964;">diff_from_fathers_age</span><span>: int
+</span><span>    ) -&gt; Person:
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#ffb964;">Person</span><span>(name, fathers_age - diff_from_fathers_age)
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">staticmethod
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">nationality</span><span>() -&gt; str:
+</span><span>        </span><span style="color:#888888;">&quot;&quot;&quot; All are japanese &quot;&quot;&quot;
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Japan</span><span style="color:#556633;">&quot;
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">property
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">name</span><span>(</span><span style="color:#ffb964;">self</span><span>) -&gt; str:
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#ffb964;">self</span><span>._name
+</span><span>
+</span><span>    @name.</span><span style="color:#ffb964;">setter
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">name</span><span>(</span><span style="color:#ffb964;">self</span><span>, </span><span style="color:#ffb964;">name_value</span><span>) -&gt; None:
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._name = name_value
+</span><span>
+</span><span>
+</span><span style="color:#ffb964;">print</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">-</span><span style="color:#556633;">&quot; </span><span>* </span><span style="color:#cf6a4c;">100</span><span>)
+</span><span style="color:#ffb964;">print</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">mutable person</span><span style="color:#556633;">&quot;</span><span>)
+</span><span style="color:#ffb964;">print</span><span>(</span><span style="color:#ffb964;">MutablePerson</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Siva</span><span style="color:#556633;">&quot;</span><span>, </span><span style="color:#cf6a4c;">28</span><span>)._MutablePerson__age)
+</span><span style="color:#ffb964;">print</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">-</span><span style="color:#556633;">&quot; </span><span>* </span><span style="color:#cf6a4c;">100</span><span>)
+</span><span>
+</span><span style="color:#ffb964;">print</span><span>(</span><span style="color:#ffb964;">MutablePerson</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Noona</span><span style="color:#556633;">&quot;</span><span>, </span><span style="color:#cf6a4c;">28</span><span>)._name)
+</span><span>
+</span><span style="color:#ffb964;">print</span><span>(MutablePerson.</span><span style="color:#ffb964;">from_birthyear</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Siva</span><span style="color:#556633;">&quot;</span><span>, </span><span style="color:#cf6a4c;">1992</span><span>).name)
+</span><span style="color:#ffb964;">print</span><span>(
+</span><span>    MutablePerson.</span><span style="color:#ffb964;">from_birthyear</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Siva</span><span style="color:#556633;">&quot;</span><span>, </span><span style="color:#cf6a4c;">1992</span><span>)._name
+</span><span>)  </span><span style="color:#888888;"># generally not preferred, you create a property getter like above
+</span><span>
+</span><span>siva = </span><span style="color:#ffb964;">MutablePerson</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Siva</span><span style="color:#556633;">&quot;</span><span>, </span><span style="color:#cf6a4c;">28</span><span>)
+</span><span style="color:#ffb964;">print</span><span>(siva.name)
+</span><span>siva.name += </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">ram</span><span style="color:#556633;">&quot;
+</span><span style="color:#ffb964;">print</span><span>(siva.name)
+</span><span>
+</span><span style="color:#ffb964;">print</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">-</span><span style="color:#556633;">&quot; </span><span>* </span><span style="color:#cf6a4c;">100</span><span>)
+</span></code></pre>
+<p>Another example</p>
+<p><em>Snippet 5:</em></p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span>@</span><span style="color:#ffb964;">dataclass
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">Employee</span><span>:
+</span><span>
+</span><span>    _name: str
+</span><span>    _company: str
+</span><span>    _retired: str = </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">NO</span><span style="color:#556633;">&quot;
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">property
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">company</span><span>(</span><span style="color:#ffb964;">self</span><span>):
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#ffb964;">self</span><span>._company
+</span><span>
+</span><span>    @company.</span><span style="color:#ffb964;">setter
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">company</span><span>(</span><span style="color:#ffb964;">self</span><span>, </span><span style="color:#ffb964;">value</span><span>):
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._company = value
+</span><span>
+</span><span>
+</span><span>e = </span><span style="color:#ffb964;">Employee</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Siva</span><span style="color:#556633;">&quot;</span><span>, </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Rakuten</span><span style="color:#556633;">&quot;</span><span>)
+</span><span style="color:#ffb964;">print</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Company name is :</span><span style="color:#556633;">&quot;</span><span>, e.company)
+</span><span>e.company = </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Google</span><span style="color:#556633;">&quot;
+</span><span style="color:#ffb964;">print</span><span>(</span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">Company name is :</span><span style="color:#556633;">&quot;</span><span>, e.company)
+</span></code></pre>
+<h2 id="staticmethod-vs-classmethod"><code>@staticmethod</code> vs <code>@classmethod</code></h2>
+<p>We can use either annotation to create a class from their methods. <code>@classmethod</code> takes class as first argument. As a rule of thumb, if your methods accesses other variables/methods in the class, we can use <code>@classmethod</code>. <code>@staticmethod</code> does not access any of the classes's properties. We can also use <code>@staticmethod</code> to create a class like <em>Snipprt 3:</em>.</p>
+<h2 id="typing-in-python">Typing in Python</h2>
+<p>If we want to use class types inside the class, we need to use this import at the top of the file. This will become default in Python 4.</p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span style="color:#8fbfdc;">from </span><span>__future__ </span><span style="color:#8fbfdc;">import </span><span>annotations
+</span></code></pre>
+<p>For example, the return type of <code>from_birthyear</code> is <code>Person</code> but this only works when we import <code>annotations</code></p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span>@</span><span style="color:#ffb964;">dataclass</span><span>(</span><span style="color:#ffb964;">frozen</span><span>=True)
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">Person</span><span>:
+</span><span>
+</span><span> ...
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">classmethod
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">from_birthyear</span><span>(</span><span style="color:#ffb964;">cls</span><span>, </span><span style="color:#ffb964;">name</span><span>: str, </span><span style="color:#ffb964;">birth_year</span><span>: int) -&gt; Person:
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span style="color:#ffb964;">cls</span><span>(name, date.</span><span style="color:#ffb964;">today</span><span>().year - birth_year)
+</span><span> 
+</span><span> ...
+</span><span>
+</span></code></pre>
+<h2 id="normal-classes">Normal classes</h2>
+<p>For arbitrary initialization of class objects, we always use <code>__init__</code>. We cannot create <code>_randomly_fill</code> when we use <code>@dataclass</code>.</p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span style="color:#8fbfdc;">from </span><span>dataclasses </span><span style="color:#8fbfdc;">import </span><span>dataclass
+</span><span>
+</span><span style="color:#8fbfdc;">from </span><span>enum </span><span style="color:#8fbfdc;">import </span><span>Enum
+</span><span style="color:#8fbfdc;">from </span><span>typing </span><span style="color:#8fbfdc;">import </span><span>NamedTuple, List
+</span><span>
+</span><span>
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">Cell</span><span>(</span><span style="color:#ffb964;">str</span><span>, </span><span style="color:#ffb964;">Enum</span><span>):
+</span><span>    </span><span style="color:#ffb964;">EMPTY </span><span>= </span><span style="color:#556633;">&quot; &quot;
+</span><span>    </span><span style="color:#ffb964;">BLOCKED </span><span>= </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">X</span><span style="color:#556633;">&quot;
+</span><span>    </span><span style="color:#ffb964;">START </span><span>= </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">S</span><span style="color:#556633;">&quot;
+</span><span>    </span><span style="color:#ffb964;">GOAL </span><span>= </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">G</span><span style="color:#556633;">&quot;
+</span><span>    </span><span style="color:#ffb964;">PATH </span><span>= </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">*</span><span style="color:#556633;">&quot;
+</span><span>
+</span><span>
+</span><span style="color:#888888;">&quot;&quot;&quot;
+</span><span style="color:#888888;"># Alternate version
+</span><span style="color:#888888;">class MazeLocation(NamedTuple):
+</span><span style="color:#888888;"> row: int
+</span><span style="color:#888888;"> column: int
+</span><span style="color:#888888;">&quot;&quot;&quot;
+</span><span>
+</span><span>
+</span><span>@</span><span style="color:#ffb964;">dataclass
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">MazeLocation</span><span>:
+</span><span>
+</span><span>    row: int
+</span><span>    column: int
+</span><span>
+</span><span>
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">Maze</span><span>:
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">__init__</span><span>(
+</span><span>        </span><span style="color:#ffb964;">self</span><span>,
+</span><span>        </span><span style="color:#ffb964;">rows</span><span>: int = </span><span style="color:#cf6a4c;">10</span><span>,
+</span><span>        </span><span style="color:#ffb964;">columns</span><span>: int = </span><span style="color:#cf6a4c;">10</span><span>,
+</span><span>        </span><span style="color:#ffb964;">sparseness</span><span>: float = </span><span style="color:#cf6a4c;">0.2</span><span>,
+</span><span>        </span><span style="color:#ffb964;">start</span><span>: MazeLocation = </span><span style="color:#ffb964;">MazeLocation</span><span>(</span><span style="color:#cf6a4c;">0</span><span>, </span><span style="color:#cf6a4c;">0</span><span>),
+</span><span>        </span><span style="color:#ffb964;">goal</span><span>: MazeLocation = </span><span style="color:#ffb964;">MazeLocation</span><span>(</span><span style="color:#cf6a4c;">9</span><span>, </span><span style="color:#cf6a4c;">9</span><span>),
+</span><span>    ) -&gt; None:
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._rows = rows
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._columns = columns
+</span><span>        </span><span style="color:#ffb964;">self</span><span>.start: MazeLocation = start
+</span><span>        </span><span style="color:#ffb964;">self</span><span>.goal: MazeLocation = goal
+</span><span>        </span><span style="color:#888888;"># fill grid with empty cells
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._grid: List[List[Cell]] = [
+</span><span>            [Cell.</span><span style="color:#ffb964;">EMPTY </span><span style="color:#8fbfdc;">for </span><span>c </span><span style="color:#8fbfdc;">in </span><span style="color:#ffb964;">range</span><span>(columns)] </span><span style="color:#8fbfdc;">for </span><span>r </span><span style="color:#8fbfdc;">in </span><span style="color:#ffb964;">range</span><span>(rows)
+</span><span>        ]
+</span><span>        </span><span style="color:#ffb964;">self</span><span>.</span><span style="color:#ffb964;">_randomly_fill</span><span>(rows, columns, sparseness)
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._grid[start.row][start.column] = Cell.</span><span style="color:#ffb964;">START
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._grid[goal.row][goal.column] = Cell.</span><span style="color:#ffb964;">GOAL
+</span><span>
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">_randomly_fill</span><span>(</span><span style="color:#ffb964;">self</span><span>, </span><span style="color:#ffb964;">rows</span><span>: int, </span><span style="color:#ffb964;">columns</span><span>: int, </span><span style="color:#ffb964;">sparseness</span><span>: float):
+</span><span>        </span><span style="color:#8fbfdc;">for </span><span>row </span><span style="color:#8fbfdc;">in </span><span style="color:#ffb964;">range</span><span>(rows):
+</span><span>            </span><span style="color:#8fbfdc;">for </span><span>column </span><span style="color:#8fbfdc;">in </span><span style="color:#ffb964;">range</span><span>(columns):
+</span><span>                </span><span style="color:#8fbfdc;">if </span><span>random.</span><span style="color:#ffb964;">uniform</span><span>(</span><span style="color:#cf6a4c;">0</span><span>, </span><span style="color:#cf6a4c;">1.0</span><span>) &lt; </span><span style="color:#cf6a4c;">0.2</span><span>:
+</span><span>                    </span><span style="color:#ffb964;">self</span><span>._grid[row][column] = Cell.</span><span style="color:#ffb964;">BLOCKED
+</span><span>
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">__str__</span><span>(</span><span style="color:#ffb964;">self</span><span>) -&gt; str:
+</span><span>        output: str = </span><span style="color:#556633;">&quot;&quot;
+</span><span>        </span><span style="color:#8fbfdc;">for </span><span>row </span><span style="color:#8fbfdc;">in </span><span style="color:#ffb964;">self</span><span>._grid:
+</span><span>            output += </span><span style="color:#556633;">&quot;&quot;</span><span>.</span><span style="color:#ffb964;">join</span><span>([c.value </span><span style="color:#8fbfdc;">for </span><span>c </span><span style="color:#8fbfdc;">in </span><span>row]) + </span><span style="color:#556633;">&quot;</span><span style="color:#99ad6a;">\n</span><span style="color:#556633;">&quot;
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span>output
+</span><span>
+</span><span>
+</span><span>maze = </span><span style="color:#ffb964;">Maze</span><span>()
+</span><span style="color:#ffb964;">print</span><span>(maze)
+</span><span>
+</span></code></pre>
+<p>Another small note about property in Python class.</p>
+<ul>
+<li>If it's a property, we can call the property directly without parans</li>
+</ul>
+<p>Example</p>
+<pre data-lang="python" style="background-color:#151515;color:#e8e8d3;" class="language-python "><code class="language-python" data-lang="python"><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">Stack</span><span>(</span><span style="color:#ffb964;">Generic</span><span>[T]):
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">__init__</span><span>(</span><span style="color:#ffb964;">self</span><span>) -&gt; None:
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._container = []
+</span><span>
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">empty</span><span>(</span><span style="color:#ffb964;">self</span><span>) -&gt; bool:
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span>not </span><span style="color:#ffb964;">self</span><span>._container
+</span><span>
+</span><span>    ...
+</span><span>
+</span><span>a = Stack[int]()
+</span><span>a.</span><span style="color:#ffb964;">push</span><span>(</span><span style="color:#cf6a4c;">10</span><span>)
+</span><span style="color:#ffb964;">print</span><span>(a.</span><span style="color:#ffb964;">empty</span><span>())
+</span><span>
+</span><span>
+</span><span style="color:#8fbfdc;">class </span><span style="color:#ffb964;">StackWithEmptyProperty</span><span>(</span><span style="color:#ffb964;">Generic</span><span>[T]):
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">__init__</span><span>(</span><span style="color:#ffb964;">self</span><span>) -&gt; None:
+</span><span>        </span><span style="color:#ffb964;">self</span><span>._container = []
+</span><span>
+</span><span>    @</span><span style="color:#ffb964;">property
+</span><span>    </span><span style="color:#8fbfdc;">def </span><span style="color:#fad07a;">empty</span><span>(</span><span style="color:#ffb964;">self</span><span>) -&gt; bool:
+</span><span>        </span><span style="color:#8fbfdc;">return </span><span>not </span><span style="color:#ffb964;">self</span><span>._container
+</span><span>
+</span><span>    ...
+</span><span>
+</span><span>a = Stack[int]()
+</span><span>a.</span><span style="color:#ffb964;">push</span><span>(</span><span style="color:#cf6a4c;">10</span><span>)
+</span><span style="color:#ffb964;">print</span><span>(a.empty)
+</span></code></pre>
+
+    </article>
+</section>
+</article>
+    <footer>
+        <div class="social">
+            <ul>
+                <li>
+                    <a href="https://github.com" title="Github"><i data-feather="github"></i></a>
+                </li>
+                <li>
+                    <a href="https://twitter.com" title="Twitter"><i data-feather="twitter"></i></a>
+                </li>
+                <li>
+                    <a href="https://trickster.github.io/ atom.xml" title="trickster"><i
+                            data-feather="rss"></i></a>
+                </li>
+            </ul>
+        </div>
+        <p>
+            © trickster 2022<br>
+            Powered by <a target="_blank" href="https://getzola.org/">Zola</a>
+        </p>
+    </footer>
+    <noscript><img src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/pixel.gif"></noscript>
+    <script src="https://shynet.mrkaran.dev/ingress/315d76e3-3239-469c-96c5-95fdc568b64e/script.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+
+</html>
