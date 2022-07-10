@@ -35,6 +35,10 @@ h6 {
   font-size: 1rem;
 }
 
+article {
+  font-size: 0.9rem;
+}
+
 blockquote {
   margin-left: 1rem;
   font-style: italic;
@@ -75,6 +79,7 @@ code {
 }
 
 @media (max-width: 700px) {
+
   h1,
   h2,
   h3,
